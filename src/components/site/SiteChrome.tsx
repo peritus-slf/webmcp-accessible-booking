@@ -1,0 +1,178 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { CommandInterface } from "@/components/CommandInterface";
+import { useStore } from "@/lib/useStore";
+import { signOut } from "@/lib/store";
+import { registerAllTools } from "@/lib/tools/webmcp";
+
+/**
+ * Site chrome: skip links, banner, primary navigation, footer.
+ *
+ * Several WCAG 2.2 criteria are satisfied structurally here rather than
+ * page by page:
+ *
+ *  - 2.4.1 Bypass Blocks — skip links, first in the tab order.
+ *  - 3.2.3 Consistent Navigation — the same nav, same order, every page.
+ *  - 3.2.6 Consistent Help (2.2, A) — the access-line contact sits in the same
+ *    place in the footer of every page.
+ *  - 2.4.11 Focus Not Obscured (2.2, AA) — the header does not stick, so a
+ *    focused element can never be hidden behind it. A sticky header is the
+ *    single most common way sites fail this.
+ */
+
+const NAV = [
+  { href: "/", label: "What's on" },
+  { href: "/access", label: "Access" },
+  { href: "/account", label: "My access profile" },
+  { href: "/bookings", label: "My bookings" },
+];
+
+export function SiteChrome({ children }: { children: React.ReactNode }) {
+  const { user } = useStore();
+  const pathname = usePathname();
+
+  // Tools are registered once for the whole site, so an agent can act on any
+  // page rather than only on the seat map.
+  useEffect(() => {
+    let dispose: (() => void) | undefined;
+    registerAllTools().then((fn) => {
+      dispose = fn;
+    });
+    return () => dispose?.();
+  }, []);
+
+  return (
+    <>
+      <nav aria-label="Skip links" className="sr-only focus-within:not-sr-only">
+        <ul className="flex gap-2 bg-slate-900 p-2 text-white">
+          <li>
+            <a href="#main" className="inline-block rounded px-3 py-2 underline">
+              Skip to main content
+            </a>
+          </li>
+          <li>
+            <a href="#site-nav" className="inline-block rounded px-3 py-2 underline">
+              Skip to navigation
+            </a>
+          </li>
+          <li>
+            <a href="#access-help" className="inline-block rounded px-3 py-2 underline">
+              Skip to access help
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <Link
+            href="/"
+            className="rounded text-lg font-semibold tracking-tight focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-600"
+          >
+            Aurora Hall
+            <span className="block text-xs font-normal text-slate-500">Reykjavík</span>
+          </Link>
+
+          <nav id="site-nav" aria-label="Primary" className="order-3 w-full sm:order-2 sm:w-auto">
+            <ul className="flex flex-wrap gap-1">
+              {NAV.map((item) => {
+                const current = pathname === item.href;
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={current ? "page" : undefined}
+                      className={[
+                        // 2.5.8 Target Size: comfortably above the 24px minimum.
+                        "inline-flex min-h-11 items-center rounded-md px-3 py-2 text-sm",
+                        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600",
+                        current
+                          ? "bg-slate-900 font-medium text-white dark:bg-white dark:text-slate-900"
+                          : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800",
+                      ].join(" ")}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <div className="order-2 flex items-center gap-3 sm:order-3">
+            <CommandInterface />
+            {user ? (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="hidden text-slate-600 sm:inline dark:text-slate-400">
+                  {user.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="min-h-11 rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/signin"
+                className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+        {children}
+      </main>
+
+      <footer className="mt-12 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          {/* 3.2.6 Consistent Help — same place, every page. */}
+          <section id="access-help" aria-labelledby="access-help-heading">
+            <h2 id="access-help-heading" className="text-sm font-semibold">
+              Access help
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
+              The access line is open 10:00–18:00 on{" "}
+              <a
+                href="tel:+3545550100"
+                className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
+                +354 555 0100
+              </a>
+              , or email{" "}
+              <a
+                href="mailto:access@example.is"
+                className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
+                access@example.is
+              </a>
+              . You never have to phone to book accessible seating here — everything
+              on the access line is also on this site.
+            </p>
+          </section>
+
+          <p className="mt-6 border-t border-slate-200 pt-6 text-xs text-slate-500 dark:border-slate-800">
+            Aurora Hall is a fictional venue built as a WebMCP demonstration. No
+            real tickets, no real money, no real account.{" "}
+            <a
+              href="https://github.com/peritus-slf/saeti"
+              className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+            >
+              Source on GitHub
+            </a>
+            .
+          </p>
+        </div>
+      </footer>
+    </>
+  );
+}

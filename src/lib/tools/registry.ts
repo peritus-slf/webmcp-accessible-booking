@@ -1,27 +1,33 @@
-import { HALL, VENUE_ACCESS, seatById } from "@/lib/venue/hall";
-import { describeSeat, findSeats } from "@/lib/venue/query";
+import { VENUE_ACCESS, seatById } from "@/lib/venue/hall";
+import { EVENTS, accessSummary, eventBySlug, type VenueEvent } from "@/lib/venue/events";
+import { describeSeat, findSeats, seatsForEvent } from "@/lib/venue/query";
 import type { SeatQuery, StrobeExposure } from "@/lib/venue/types";
 import { isk } from "@/lib/format";
+import { bookingReference, getState, setState } from "@/lib/store";
 
 /**
  * The tool contract for Aurora Hall.
  *
  * This file is the single definition of what can be done on this site. It is
- * consumed twice:
+ * consumed twice: by an AI agent through `document.modelContext.registerTool`,
+ * and by the in-page command interface, which is keyboard and screen-reader
+ * native and calls exactly the same handlers.
  *
- *   1. by an AI agent, through `document.modelContext.registerTool`
- *   2. by the in-page command interface, which is keyboard and screen-reader
- *      native and calls exactly the same handlers
+ * The WebMCP proposal states it "is not designed for ingestion by accessibility
+ * technology", which invites a two-tier web: rich, actionable capability for
+ * agents, and whatever is left for disabled users. Defining the contract once —
+ * here — and letting both consumers read it is how this demo refuses that split.
  *
- * The WebMCP proposal states it "is not designed for ingestion by
- * accessibility technology", which invites a two-tier web: rich, actionable
- * capability for agents, and whatever is left for disabled users. Defining the
- * contract once — here — and letting both consumers read it is how this demo
- * refuses that split. Neither consumer is privileged.
+ * WHAT IS DELIBERATELY NOT A TOOL
  *
- * Every handler returns readable prose rather than a data structure. An agent
- * reasons over it perfectly well, and it is the same sentence a screen reader
- * announces. One output, no second-class rendering.
+ * There is no `sign_in`. An agent cannot authenticate on someone's behalf here.
+ * Handing an agent the ability to establish identity is a different and much
+ * larger trust decision than handing it the ability to search a seating plan,
+ * and nothing about this use case requires it. Authentication stays with the
+ * human; everything after it is shared.
+ *
+ * There is also no `update_access_profile`. An agent can read what the patron
+ * has recorded about their own needs and act on it. It cannot rewrite it.
  */
 
 export interface ToolDefinition<Input = Record<string, unknown>> {
@@ -32,120 +38,239 @@ export interface ToolDefinition<Input = Record<string, unknown>> {
   execute: (input: Input) => Promise<string>;
 }
 
-// --- Booking state ---------------------------------------------------------
-
-/**
- * Held and booked seats live in a tiny observable store so that a tool call
- * made by the agent visibly updates the seating plan for a sighted companion
- * at the same moment it is announced to a screen-reader user.
- */
-
-interface BookingState {
-  held: string[];
-  booked: string[];
-  companionTicketApplied: boolean;
-}
-
-let state: BookingState = { held: [], booked: [], companionTicketApplied: false };
-const listeners = new Set<() => void>();
-
-function emit(): void {
-  for (const listener of listeners) listener();
-}
-
-export function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-export function getBookingState(): BookingState {
-  return state;
-}
-
-function setState(next: Partial<BookingState>): void {
-  state = { ...state, ...next };
-  emit();
-}
-
-export function resetBooking(): void {
-  setState({ held: [], booked: [], companionTicketApplied: false });
-}
-
-// --- Schema fragments ------------------------------------------------------
-
 const STROBE_VALUES: StrobeExposure[] = ["none", "low", "high"];
+const NOT_SIGNED_IN =
+  "Nobody is signed in. Sign in on the site first — an agent cannot sign in on your behalf here, by design.";
+
+type EventLookup =
+  | { ok: true; event: VenueEvent }
+  | { ok: false; error: string };
+
+function eventOrError(slug: string): EventLookup {
+  const event = eventBySlug(slug);
+  if (!event) {
+    return {
+      ok: false,
+      error: `There is no event "${slug}". Current events: ${EVENTS.map((e) => e.slug).join(", ")}.`,
+    };
+  }
+  return { ok: true, event };
+}
+
+// --- Discovery -------------------------------------------------------------
+
+const listEventsTool: ToolDefinition<{ relaxedOnly?: boolean; captionedOnly?: boolean }> = {
+  name: "list_events",
+  description:
+    "List what is on at Aurora Hall, with the access provision for each performance: whether it is captioned, signed, audio described, relaxed, and how much strobe its lighting rig uses.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      relaxedOnly: { type: "boolean", description: "Only relaxed performances." },
+      captionedOnly: { type: "boolean", description: "Only captioned performances." },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true },
+  async execute({ relaxedOnly, captionedOnly } = {}) {
+    let events = EVENTS;
+    if (relaxedOnly) events = events.filter((e) => e.relaxed);
+    if (captionedOnly) events = events.filter((e) => e.captioned);
+    if (events.length === 0) return "No performances match that filter.";
+
+    return events
+      .map((e) => {
+        const tags = [
+          e.captioned ? "captioned" : null,
+          e.signed ? "signed" : null,
+          e.audioDescribed ? "audio described" : null,
+          e.relaxed ? "relaxed performance" : null,
+        ].filter(Boolean);
+        const strobe =
+          e.lighting === "none"
+            ? "no strobe"
+            : e.lighting === "heavy"
+              ? "heavy strobe throughout"
+              : "some strobe in the front rows";
+        return `${e.title} (${e.slug}) — ${e.subtitle}. ${e.date}, curtain ${e.curtain}. ${e.category}. ${strobe}${tags.length ? `, ${tags.join(", ")}` : ""}.${e.soldOut ? " SOLD OUT." : ""}`;
+      })
+      .join("\n");
+  },
+};
+
+const getEventTool: ToolDefinition<{ eventSlug: string }> = {
+  name: "get_event",
+  description:
+    "Full detail for one performance, including its access provision and exactly which rows its strobe affects.",
+  inputSchema: {
+    type: "object",
+    properties: { eventSlug: { type: "string", description: "Event identifier, e.g. 'vetrarnott'." } },
+    required: ["eventSlug"],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true },
+  async execute({ eventSlug }) {
+    const found = eventOrError(eventSlug);
+    if (!found.ok) return found.error;
+    const e = found.event;
+    return [
+      `${e.title} — ${e.subtitle}`,
+      `${e.category}. ${e.date}, doors ${e.doors}, curtain ${e.curtain}. ${e.runtime}.`,
+      e.description,
+      ...accessSummary(e),
+      e.soldOut ? "This performance is sold out. Returns go to the access list first." : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+  },
+};
+
+// --- The patron's own recorded needs ---------------------------------------
+
+const accessProfileTool: ToolDefinition = {
+  name: "get_my_access_profile",
+  description:
+    "Read the signed-in patron's saved access requirements, so they do not have to state them again. Use this before searching for seats. Read-only: an agent cannot change what someone has recorded about their own needs.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  annotations: { readOnlyHint: true },
+  async execute() {
+    const { user, accessProfile: p } = getState();
+    if (!user) return NOT_SIGNED_IN;
+
+    const needs: string[] = [];
+    if (p.wheelchairSpaces > 0) needs.push(`${p.wheelchairSpaces} wheelchair bay(s)`);
+    if (p.companionSeat) needs.push("a companion seat beside the bay");
+    if (p.transferSeat) needs.push("a transfer seat with a lifting armrest");
+    if (p.assistanceDog) needs.push("floor room for an assistance dog");
+    if (p.hearingLoop) needs.push("induction-loop coverage");
+    if (p.captionsRequired) needs.push("a clear view of the caption unit");
+    if (p.interpreterRequired) needs.push("a clear view of the interpreter");
+    if (p.stepFree) needs.push("a step-free route");
+    if (p.noStrobe) needs.push("NO strobe exposure (photosensitive epilepsy — not negotiable)");
+    if (p.maxWalkToWcM) needs.push(`no more than ${p.maxWalkToWcM} m to an accessible toilet`);
+
+    return [
+      `${user.name} (${user.email}).`,
+      needs.length > 0 ? `Recorded needs: ${needs.join("; ")}.` : "No access needs recorded.",
+      p.notes ? `Their own note: "${p.notes}"` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  },
+};
+
+// --- Seats -----------------------------------------------------------------
 
 const findSeatsSchema = {
   type: "object",
   properties: {
-    party: { type: "integer", minimum: 1, maximum: 8, description: "Total people in the party, including any wheelchair users." },
-    wheelchairSpaces: { type: "integer", minimum: 0, maximum: 4, description: "Number of wheelchair bays needed. A bay is a flat space, not a seat." },
-    companionSeat: { type: "boolean", description: "Reserve a seat immediately beside each wheelchair bay." },
-    transferSeat: { type: "boolean", description: "Require a seat whose armrest lifts, to transfer out of a wheelchair." },
+    eventSlug: { type: "string", description: "Which performance to search. Required." },
+    useMyAccessProfile: {
+      type: "boolean",
+      description:
+        "Apply the signed-in patron's saved access requirements on top of anything set here. Prefer this over restating their needs.",
+    },
+    party: { type: "integer", minimum: 1, maximum: 8, description: "Total people, including any wheelchair users." },
+    wheelchairSpaces: { type: "integer", minimum: 0, maximum: 4, description: "Wheelchair bays needed. A bay is a flat space, not a seat." },
+    companionSeat: { type: "boolean", description: "Reserve the seat immediately beside each bay." },
+    transferSeat: { type: "boolean", description: "Require a seat whose armrest lifts." },
     assistanceDogSpace: { type: "boolean", description: "Require floor room for an assistance dog." },
     hearingLoop: { type: "boolean", description: "Require induction-loop coverage." },
     captionScreenVisible: { type: "boolean", description: "Require a clear sightline to the caption unit." },
-    signInterpreterVisible: { type: "boolean", description: "Require a clear sightline to the sign-language interpreter." },
-    stepFree: { type: "boolean", description: "Require a route with no steps from the step-free entrance." },
+    signInterpreterVisible: { type: "boolean", description: "Require a clear sightline to the interpreter." },
+    stepFree: { type: "boolean", description: "Require a route with no steps." },
     maxDistanceToAccessibleWcM: { type: "number", description: "Furthest acceptable walk to an accessible toilet, in metres." },
-    maxDistanceToStageM: { type: "number", description: "Furthest acceptable distance from the stage, in metres. Matters for lip-reading." },
+    maxDistanceToStageM: { type: "number", description: "Furthest acceptable distance from the stage. Matters for lip-reading." },
     maxStrobeExposure: { type: "string", enum: STROBE_VALUES, description: "Highest acceptable strobe exposure. Use 'none' for photosensitive epilepsy." },
     maxPriceIsk: { type: "integer", description: "Price ceiling per seat, in ISK." },
     section: { type: "string", enum: ["stalls", "circle", "balcony"], description: "Restrict to one section." },
   },
+  required: ["eventSlug"],
   additionalProperties: false,
-} as const;
+};
 
-// --- Tools -----------------------------------------------------------------
-
-const findSeatsTool: ToolDefinition<SeatQuery> = {
+const findSeatsTool: ToolDefinition<SeatQuery & { eventSlug: string; useMyAccessProfile?: boolean }> = {
   name: "find_seats",
   description:
-    "Find seats at Aurora Hall matching access requirements — wheelchair bays, companion seats, induction loop, caption and interpreter sightlines, step-free routes, strobe limits, distance to an accessible toilet. Returns whole groups that sit together, and states plainly any requirement it could not meet.",
-  inputSchema: findSeatsSchema as unknown as Record<string, unknown>,
+    "Find seats for one performance matching access requirements — wheelchair bays, companion seats, induction loop, caption and interpreter sightlines, step-free routes, strobe limits, distance to an accessible toilet. Returns whole groups that sit together, and states plainly any requirement it could not meet.",
+  inputSchema: findSeatsSchema,
   annotations: { readOnlyHint: true },
   async execute(input) {
-    const groups = findSeats(input ?? {});
-    if (groups.length === 0) {
-      return "No seats in the house meet those requirements, even after relaxing every constraint that can safely be relaxed. Step-free access and strobe limits were held firm. Contact the access line for a held-back allocation.";
+    const found = eventOrError(input?.eventSlug ?? "");
+    if (!found.ok) return found.error;
+    const event = found.event;
+    if (event.soldOut) return `${event.title} is sold out. Returns are released to the access list first.`;
+
+    const query: SeatQuery = { ...input };
+    let applied = "";
+
+    if (input.useMyAccessProfile) {
+      const { user, accessProfile: p } = getState();
+      if (!user) return NOT_SIGNED_IN;
+      if (p.wheelchairSpaces > 0) query.wheelchairSpaces = p.wheelchairSpaces;
+      if (p.companionSeat) query.companionSeat = true;
+      if (p.transferSeat) query.transferSeat = true;
+      if (p.assistanceDog) query.assistanceDogSpace = true;
+      if (p.hearingLoop) query.hearingLoop = true;
+      if (p.captionsRequired && event.captioned) query.captionScreenVisible = true;
+      if (p.interpreterRequired && event.signed) query.signInterpreterVisible = true;
+      if (p.stepFree) query.stepFree = true;
+      if (p.noStrobe) query.maxStrobeExposure = "none";
+      if (p.maxWalkToWcM) query.maxDistanceToAccessibleWcM = p.maxWalkToWcM;
+      applied = " Your saved access requirements were applied.";
+
+      if (p.captionsRequired && !event.captioned) {
+        applied += ` Note: ${event.title} is NOT a captioned performance, so no seat can satisfy that requirement here.`;
+      }
+      if (p.noStrobe && event.lighting === "heavy") {
+        return `${event.title} uses continuous strobe throughout the house. There is no seat at this performance that is safe for photosensitive epilepsy, so none is offered. ${accessSummary(event)[0]}`;
+      }
     }
+
+    const groups = findSeats(event, query);
+    if (groups.length === 0) {
+      return `No seats for ${event.title} meet those requirements, even after relaxing every constraint that can safely be relaxed. Step-free access and strobe limits were held firm.${applied} Contact the access line for a held-back allocation.`;
+    }
+
     const lines = groups.map((g, i) => {
       const seats = g.seats.map((s) => s.id).join(" and ");
       const compromise = g.compromises.length > 0 ? ` ${g.compromises.join(" ")}` : "";
       return `${i + 1}. ${seats} — ${isk(g.totalPriceIsk)} kr total. ${g.rationale}${compromise}`;
     });
-    return `${groups.length} option${groups.length === 1 ? "" : "s"} found.\n${lines.join("\n")}`;
+    return `${groups.length} option${groups.length === 1 ? "" : "s"} for ${event.title}.${applied}\n${lines.join("\n")}`;
   },
 };
 
-const describeSeatTool: ToolDefinition<{ seatId: string }> = {
+const describeSeatTool: ToolDefinition<{ eventSlug: string; seatId: string }> = {
   name: "describe_seat",
   description:
-    "Describe one seat in full: price, the route to it, distance to the stage and to an accessible toilet, induction-loop coverage, caption and interpreter sightlines, strobe exposure, and whether there is floor room for an assistance dog.",
+    "Describe one seat at one performance in full: price, the route to it, distance to the stage and to an accessible toilet, loop coverage, caption and interpreter sightlines, strobe exposure, assistance-dog floor room.",
   inputSchema: {
     type: "object",
-    properties: { seatId: { type: "string", description: "Seat identifier, for example 'N-2'." } },
-    required: ["seatId"],
+    properties: {
+      eventSlug: { type: "string", description: "Which performance." },
+      seatId: { type: "string", description: "Seat identifier, e.g. 'N-2'." },
+    },
+    required: ["eventSlug", "seatId"],
     additionalProperties: false,
   },
   annotations: { readOnlyHint: true },
-  async execute({ seatId }) {
-    const seat = seatById(seatId);
-    if (!seat) return `There is no seat ${seatId} in Aurora Hall.`;
+  async execute({ eventSlug, seatId }) {
+    const found = eventOrError(eventSlug);
+    if (!found.ok) return found.error;
+    const base = seatById(seatId);
+    if (!base) return `There is no seat ${seatId} in Aurora Hall.`;
+    const seat = seatsForEvent(found.event).find((s) => s.id === seatId)!;
     const status =
-      seat.status === "available"
-        ? "Available."
-        : seat.status === "sold"
-          ? "Already sold."
-          : "Currently held.";
-    return `${describeSeat(seat)} ${status}`;
+      seat.status === "available" ? "Available." : seat.status === "sold" ? "Already sold." : "Currently held.";
+    return `${describeSeat(seat, found.event)} ${status}`;
   },
 };
 
 const venueAccessTool: ToolDefinition = {
   name: "get_venue_access_info",
   description:
-    "Get Aurora Hall's access facilities: step-free entrances, accessible toilets, induction-loop coverage, the quiet room, assistance-dog policy, the free companion-ticket policy, where the caption unit and interpreter stand, and the strobe warning for this production.",
+    "Aurora Hall's permanent access facilities: step-free entrances, accessible toilets, induction-loop coverage, the quiet room, assistance-dog policy, the free companion-ticket policy, and where the caption unit and interpreter stand.",
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
   annotations: { readOnlyHint: true },
   async execute() {
@@ -165,39 +290,45 @@ const venueAccessTool: ToolDefinition = {
   },
 };
 
-const holdSeatsTool: ToolDefinition<{ seatIds: string[] }> = {
+// --- Holding and buying ----------------------------------------------------
+
+const holdSeatsTool: ToolDefinition<{ eventSlug: string; seatIds: string[] }> = {
   name: "hold_seats",
   description:
-    "Hold specific seats for 15 minutes so they cannot be sold to anyone else while the booking is finished. Does not purchase them.",
+    "Hold specific seats for one performance for 15 minutes so nobody else can take them. Does not purchase them and does not charge anything.",
   inputSchema: {
     type: "object",
     properties: {
-      seatIds: {
-        type: "array",
-        items: { type: "string" },
-        minItems: 1,
-        maxItems: 8,
-        description: "Seat identifiers to hold, for example ['N-2','N-3'].",
-      },
+      eventSlug: { type: "string", description: "Which performance." },
+      seatIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 8, description: "Seats to hold, e.g. ['N-2','N-3']." },
     },
-    required: ["seatIds"],
+    required: ["eventSlug", "seatIds"],
     additionalProperties: false,
   },
-  async execute({ seatIds }) {
+  annotations: { readOnlyHint: false },
+  async execute({ eventSlug, seatIds }) {
+    const found = eventOrError(eventSlug);
+    if (!found.ok) return found.error;
+
     const unknown = seatIds.filter((id) => !seatById(id));
     if (unknown.length > 0) return `No such seat: ${unknown.join(", ")}. Nothing was held.`;
 
-    const unavailable = seatIds.filter((id) => {
-      const seat = seatById(id)!;
-      return seat.status !== "available" || state.booked.includes(id);
-    });
-    if (unavailable.length > 0) {
-      return `These seats are not available: ${unavailable.join(", ")}. Nothing was held.`;
-    }
+    const state = getState();
+    const booked = state.bookings.filter((b) => b.eventSlug === eventSlug).flatMap((b) => b.seatIds);
+    const unavailable = seatIds.filter((id) => seatById(id)!.status !== "available" || booked.includes(id));
+    if (unavailable.length > 0) return `These seats are not available: ${unavailable.join(", ")}. Nothing was held.`;
 
-    const held = Array.from(new Set([...state.held, ...seatIds]));
-    setState({ held });
-    return `Held ${seatIds.join(" and ")} for 15 minutes. Nothing has been paid for yet.`;
+    // Holds belong to one performance. Switching event replaces them rather
+    // than silently accumulating seats across different nights.
+    const existing = state.holds?.eventSlug === eventSlug ? state.holds.seatIds : [];
+    const merged = Array.from(new Set([...existing, ...seatIds]));
+    setState({ holds: { eventSlug, seatIds: merged } });
+
+    const switched =
+      state.holds && state.holds.eventSlug !== eventSlug
+        ? ` Previous holds for ${state.holds.eventSlug} were released.`
+        : "";
+    return `Held ${seatIds.join(" and ")} for ${found.event.title} for 15 minutes. Nothing has been paid for yet.${switched} On hold now: ${merged.join(", ")}.`;
   },
 };
 
@@ -208,41 +339,36 @@ const releaseSeatsTool: ToolDefinition<{ seatIds?: string[] }> = {
   inputSchema: {
     type: "object",
     properties: {
-      seatIds: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          "The held seats to release, for example ['N-4','N-5']. Omit to release all of them.",
-      },
+      seatIds: { type: "array", items: { type: "string" }, description: "Held seats to release. Omit to release all." },
     },
     additionalProperties: false,
   },
   annotations: { readOnlyHint: false },
   async execute({ seatIds } = {}) {
-    if (state.held.length === 0) return "There are no seats on hold.";
+    const { holds } = getState();
+    if (!holds || holds.seatIds.length === 0) return "There are no seats on hold.";
 
     if (!seatIds || seatIds.length === 0) {
-      const released = [...state.held];
-      setState({ held: [] });
+      const released = [...holds.seatIds];
+      setState({ holds: null });
       return `Released all held seats: ${released.join(" and ")}.`;
     }
 
-    const notHeld = seatIds.filter((id) => !state.held.includes(id));
+    const notHeld = seatIds.filter((id) => !holds.seatIds.includes(id));
     if (notHeld.length > 0) {
-      return `Nothing released. These seats are not on hold: ${notHeld.join(", ")}. Currently on hold: ${state.held.join(", ")}.`;
+      return `Nothing released. These seats are not on hold: ${notHeld.join(", ")}. Currently on hold: ${holds.seatIds.join(", ")}.`;
     }
 
-    const stillHeld = state.held.filter((id) => !seatIds.includes(id));
-    setState({ held: stillHeld });
-    const keptNote = stillHeld.length > 0 ? ` Still on hold: ${stillHeld.join(", ")}.` : "";
-    return `Released ${seatIds.join(" and ")}.${keptNote}`;
+    const remaining = holds.seatIds.filter((id) => !seatIds.includes(id));
+    setState({ holds: remaining.length > 0 ? { ...holds, seatIds: remaining } : null });
+    return `Released ${seatIds.join(" and ")}.${remaining.length > 0 ? ` Still on hold: ${remaining.join(", ")}.` : ""}`;
   },
 };
 
 const completeBookingTool: ToolDefinition<{ seatIds: string[]; confirm: boolean }> = {
   name: "complete_booking",
   description:
-    "Complete the booking for specific held seats. This is the final, consequential step and it charges money. You must name exactly the seats to buy — seats left on hold are not booked and not charged. The free companion ticket is applied here if a wheelchair bay is part of the booking.",
+    "Complete the booking for specific held seats. This is the final, consequential step and it charges money. Name exactly the seats to buy — seats left on hold are not booked and not charged. Requires the patron to be signed in. The free companion ticket is applied here.",
   inputSchema: {
     type: "object",
     properties: {
@@ -251,8 +377,7 @@ const completeBookingTool: ToolDefinition<{ seatIds: string[]; confirm: boolean 
         items: { type: "string" },
         minItems: 1,
         maxItems: 8,
-        description:
-          "Exactly the seats to buy, for example ['N-2','N-3']. Every one must currently be on hold. Any other held seat is left alone.",
+        description: "Exactly the seats to buy. Every one must currently be on hold. Any other held seat is left alone.",
       },
       confirm: { type: "boolean", description: "Must be true. The caller confirms the booking should be completed." },
     },
@@ -261,56 +386,83 @@ const completeBookingTool: ToolDefinition<{ seatIds: string[]; confirm: boolean 
   },
   annotations: { readOnlyHint: false },
   async execute({ seatIds, confirm }) {
+    const state = getState();
+    if (!state.user) return NOT_SIGNED_IN;
     if (!confirm) return "Booking not completed. Set confirm to true to go ahead.";
-    if (state.held.length === 0) return "There are no seats on hold, so there is nothing to book.";
+    if (!state.holds || state.holds.seatIds.length === 0) {
+      return "There are no seats on hold, so there is nothing to book.";
+    }
 
     // Never infer which seats were meant. Booking charges money and cannot be
     // undone here, so an ambiguous request is refused rather than guessed at.
-    const notHeld = seatIds.filter((id) => !state.held.includes(id));
+    const notHeld = seatIds.filter((id) => !state.holds!.seatIds.includes(id));
     if (notHeld.length > 0) {
-      return `Not booked. These seats are not on hold: ${notHeld.join(", ")}. Currently on hold: ${state.held.join(", ")}. Hold them first, or name only the seats that are held.`;
+      return `Not booked. These seats are not on hold: ${notHeld.join(", ")}. Currently on hold: ${state.holds.seatIds.join(", ")}. Hold them first, or name only the seats that are held.`;
     }
 
-    const seats = seatIds.map((id) => seatById(id)!);
+    const event = eventBySlug(state.holds.eventSlug)!;
+    const priced = seatsForEvent(event);
+    const seats = seatIds.map((id) => priced.find((s) => s.id === id)!);
     const hasBay = seats.some((s) => s.wheelchairSpace);
     const companion = seats.find((s) => s.companionSeat);
     const chargeable = hasBay && companion ? seats.filter((s) => s.id !== companion.id) : seats;
     const total = chargeable.reduce((sum, s) => sum + s.priceIsk, 0);
 
-    const stillHeld = state.held.filter((id) => !seatIds.includes(id));
+    const stillHeld = state.holds.seatIds.filter((id) => !seatIds.includes(id));
+    const reference = bookingReference(event.slug, seatIds);
 
     setState({
-      booked: [...state.booked, ...seatIds],
-      held: stillHeld,
-      companionTicketApplied: hasBay && Boolean(companion),
+      bookings: [
+        ...state.bookings,
+        { reference, eventSlug: event.slug, seatIds, totalIsk: total, companionTicketApplied: hasBay && Boolean(companion) },
+      ],
+      holds: stillHeld.length > 0 ? { ...state.holds, seatIds: stillHeld } : null,
     });
 
     const companionNote =
-      hasBay && companion
-        ? ` The companion ticket for ${companion.id} is free, so it is not charged.`
-        : "";
+      hasBay && companion ? ` The companion ticket for ${companion.id} is free, so it is not charged.` : "";
     // Say what was deliberately left alone. Silence about the rest is how a
     // caller ends up paying for seats nobody asked for.
     const remainingNote =
       stillHeld.length > 0
         ? ` Still on hold and NOT booked or charged: ${stillHeld.join(", ")}. Release them if you do not want them.`
         : "";
-    return `Booked ${seats.map((s) => s.id).join(" and ")}. Total ${isk(total)} kr.${companionNote}${remainingNote} A confirmation with the step-free route and your access notes has been sent.`;
+    return `Booked ${seats.map((s) => s.id).join(" and ")} for ${event.title}, ${event.date}. Reference ${reference}. Total ${isk(total)} kr.${companionNote}${remainingNote} A confirmation with the step-free route and your access notes has been sent.`;
+  },
+};
+
+const myBookingsTool: ToolDefinition = {
+  name: "get_my_bookings",
+  description: "List the signed-in patron's bookings at Aurora Hall.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  annotations: { readOnlyHint: true },
+  async execute() {
+    const { user, bookings } = getState();
+    if (!user) return NOT_SIGNED_IN;
+    if (bookings.length === 0) return `${user.name} has no bookings yet.`;
+    return bookings
+      .map((b) => {
+        const event = eventBySlug(b.eventSlug)!;
+        return `${b.reference} — ${event.title}, ${event.date}. Seats ${b.seatIds.join(", ")}. ${isk(b.totalIsk)} kr${b.companionTicketApplied ? " (companion ticket free)" : ""}.`;
+      })
+      .join("\n");
   },
 };
 
 /** Every tool this site exposes. Both consumers read from this array. */
 export const TOOLS: ToolDefinition<never>[] = [
+  listEventsTool,
+  getEventTool,
+  accessProfileTool,
   findSeatsTool,
   describeSeatTool,
   venueAccessTool,
   holdSeatsTool,
   releaseSeatsTool,
   completeBookingTool,
+  myBookingsTool,
 ] as unknown as ToolDefinition<never>[];
 
 export function toolByName(name: string): ToolDefinition<never> | undefined {
   return TOOLS.find((t) => t.name === name);
 }
-
-export { HALL };

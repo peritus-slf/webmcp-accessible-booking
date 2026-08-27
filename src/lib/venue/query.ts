@@ -1,8 +1,27 @@
-import { HALL } from "./hall";
+import { HALL, ROW_ORDER } from "./hall";
+import { strobeForRow, type VenueEvent } from "./events";
 import { isk } from "@/lib/format";
 import type { Seat, SeatGroup, SeatQuery, StrobeExposure } from "./types";
 
 const STROBE_RANK: Record<StrobeExposure, number> = { none: 0, low: 1, high: 2 };
+
+/**
+ * Project the seating plan onto one performance.
+ *
+ * Strobe exposure and price both depend on which night you are coming: the
+ * lighting rig changes, and so does the price band. Seat advice that ignores
+ * the performance is advice that will eventually be wrong.
+ */
+export function seatsForEvent(event: VenueEvent): Seat[] {
+  return HALL.map((seat) => ({
+    ...seat,
+    priceIsk: Math.round((seat.priceIsk * event.priceMultiplier) / 500) * 500,
+    strobeExposure: strobeForRow(event, ROW_ORDER.indexOf(seat.row)),
+    // A caption sightline is only meaningful when the performance is captioned.
+    captionScreenVisible: event.captioned ? seat.captionScreenVisible : false,
+    signInterpreterVisible: event.signed ? seat.signInterpreterVisible : false,
+  }));
+}
 
 /** Constraints in the order we are willing to give them up, least costly first. */
 const RELAXATION_ORDER = [
@@ -96,21 +115,19 @@ function totalPrice(seats: Seat[]): number {
  * A bay and its companion seat are booked as a unit. Splitting them is the
  * single most common way an "accessible" booking turns out to be useless.
  */
-function wheelchairGroups(q: SeatQuery): Seat[][] {
+function wheelchairGroups(pool: Seat[], all: Seat[], q: SeatQuery): Seat[][] {
   const wanted = q.wheelchairSpaces ?? 0;
   if (wanted === 0) return [];
 
-  const bays = HALL.filter((s) => s.wheelchairSpace && matches(s, q));
+  const bays = pool.filter((s) => s.wheelchairSpace);
 
   /**
-   * The companion seat beside a bay.
-   *
-   * Where a companion seat sits between two bays it can be claimed by either,
-   * so prefer one that is not contested. Offering the same seat as the
-   * companion for two different bays reads as two options and is really one.
+   * The companion seat beside a bay. Where one sits between two bays it can be
+   * claimed by either, so prefer an uncontested seat: offering the same seat as
+   * the companion for two different bays presents one option as two.
    */
   const companionFor = (bay: Seat): Seat | undefined => {
-    const candidates = HALL.filter(
+    const candidates = all.filter(
       (s) =>
         s.row === bay.row &&
         Math.abs(s.number - bay.number) === 1 &&
@@ -119,7 +136,7 @@ function wheelchairGroups(q: SeatQuery): Seat[][] {
     );
     const uncontested = candidates.find(
       (c) =>
-        !HALL.some(
+        !all.some(
           (s) =>
             s.wheelchairSpace &&
             s.id !== bay.id &&
@@ -130,8 +147,6 @@ function wheelchairGroups(q: SeatQuery): Seat[][] {
     return uncontested ?? candidates[0];
   };
 
-  // One bay wanted: every qualifying bay is its own option. Returning only the
-  // first would understate what is available, which is the opposite of the job.
   if (wanted === 1) {
     const groups: Seat[][] = [];
     for (const bay of bays) {
@@ -142,8 +157,8 @@ function wheelchairGroups(q: SeatQuery): Seat[][] {
     return groups;
   }
 
-  // More than one bay: they have to be in the same row, or the party is split
-  // across the house, which defeats the point of booking together.
+  // More than one bay: they have to share a row, or the party is split across
+  // the house, which defeats the point of booking together.
   const byRow = new Map<string, Seat[]>();
   for (const bay of bays) {
     const list = byRow.get(bay.row) ?? [];
@@ -164,13 +179,13 @@ function wheelchairGroups(q: SeatQuery): Seat[][] {
   return groups;
 }
 
-function search(q: SeatQuery): SeatGroup[] {
+function search(all: Seat[], q: SeatQuery): SeatGroup[] {
   const wheelchairWanted = q.wheelchairSpaces ?? 0;
   const party = q.party ?? Math.max(1, wheelchairWanted);
+  const pool = all.filter((s) => matches(s, q));
 
   if (wheelchairWanted > 0) {
-    const groups = wheelchairGroups(q);
-    return groups
+    return wheelchairGroups(pool, all, q)
       .map((seats) => ({
         seats,
         totalPriceIsk: totalPrice(seats),
@@ -178,15 +193,13 @@ function search(q: SeatQuery): SeatGroup[] {
           `Wheelchair bay ${seats[0].id} in the ${seats[0].section}` +
           (seats.length > 1 ? ` with the companion seat ${seats[1].id} beside it` : "") +
           `. ${seats[0].stepsToReach === 0 ? "Step-free" : `${seats[0].stepsToReach} steps`} from the entrance, ` +
-          `${seats[0].distanceToAccessibleWcM} m to an accessible toilet.`,
+          `${seats[0].distanceToAccessibleWcM} m to an accessible toilet, strobe exposure ${seats[0].strobeExposure}.`,
         compromises: [],
       }))
       .sort((a, b) => a.totalPriceIsk - b.totalPriceIsk);
   }
 
-  const pool = HALL.filter((s) => matches(s, q));
-  const runs = contiguousRuns(pool, party);
-  return runs
+  return contiguousRuns(pool, party)
     .map((seats) => ({
       seats,
       totalPriceIsk: totalPrice(seats),
@@ -201,14 +214,15 @@ function search(q: SeatQuery): SeatGroup[] {
 }
 
 /**
- * Find seats matching a query.
+ * Find seats for one performance.
  *
- * If nothing satisfies every constraint, requirements are relaxed one at a
- * time in a fixed order and each dropped requirement is reported back. The
- * caller is never handed a result that quietly fails a stated access need.
+ * If nothing satisfies every constraint, requirements are relaxed one at a time
+ * in a fixed order and each dropped requirement is reported back. The caller is
+ * never handed a result that quietly fails a stated access need.
  */
-export function findSeats(q: SeatQuery, limit = 5): SeatGroup[] {
-  const exact = search(q);
+export function findSeats(event: VenueEvent, q: SeatQuery, limit = 6): SeatGroup[] {
+  const all = seatsForEvent(event);
+  const exact = search(all, q);
   if (exact.length > 0) return exact.slice(0, limit);
 
   const relaxed: SeatQuery = { ...q };
@@ -219,7 +233,7 @@ export function findSeats(q: SeatQuery, limit = 5): SeatGroup[] {
     delete relaxed[key as keyof SeatQuery];
     dropped.push(LABELS[key] ?? key);
 
-    const results = search(relaxed);
+    const results = search(all, relaxed);
     if (results.length > 0) {
       return results.slice(0, limit).map((g) => ({
         ...g,
@@ -234,20 +248,14 @@ export function findSeats(q: SeatQuery, limit = 5): SeatGroup[] {
 }
 
 /** A plain-language account of one seat, for someone who cannot see the plan. */
-export function describeSeat(seat: Seat): string {
-  const parts: string[] = [];
-  parts.push(
-    `Seat ${seat.id}: row ${seat.row}, seat ${seat.number}, in the ${seat.section}. ` +
-      `${isk(seat.priceIsk)} kr.`,
-  );
-  parts.push(
+export function describeSeat(seat: Seat, event: VenueEvent): string {
+  const parts: string[] = [
+    `Seat ${seat.id}: row ${seat.row}, seat ${seat.number}, in the ${seat.section}. ${isk(seat.priceIsk)} kr for ${event.title}.`,
     seat.stepsToReach === 0
       ? "Step-free from the north entrance."
       : `${seat.stepsToReach} steps from the step-free entrance.`,
-  );
-  parts.push(
     `${seat.distanceToStageM} m from the stage, ${seat.distanceToAccessibleWcM} m to the nearest accessible toilet.`,
-  );
+  ];
 
   if (seat.wheelchairSpace) parts.push("This is a wheelchair bay, not a seat.");
   if (seat.companionSeat) parts.push("Held as a companion seat beside a wheelchair bay.");
@@ -261,18 +269,22 @@ export function describeSeat(seat: Seat): string {
     seat.hearingLoop ? "Inside the induction-loop coverage." : "Outside the induction-loop coverage.",
   );
   parts.push(
-    seat.captionScreenVisible
-      ? "The caption unit is in view."
-      : "The caption unit is NOT in view from here.",
+    event.captioned
+      ? seat.captionScreenVisible
+        ? "The caption unit is in view."
+        : "The caption unit is NOT in view from here."
+      : "This performance is not captioned.",
   );
   parts.push(
-    seat.signInterpreterVisible
-      ? "The interpreter's position is in view."
-      : "The interpreter's position is NOT in view from here.",
+    event.signed
+      ? seat.signInterpreterVisible
+        ? "The interpreter's position is in view."
+        : "The interpreter's position is NOT in view from here."
+      : "There is no interpreter at this performance.",
   );
   parts.push(
     seat.strobeExposure === "none"
-      ? "No meaningful strobe exposure."
+      ? "No strobe exposure at this performance."
       : `Strobe exposure is ${seat.strobeExposure} here.`,
   );
 

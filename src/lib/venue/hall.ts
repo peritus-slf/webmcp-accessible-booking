@@ -30,9 +30,15 @@ function seatsInRow(row: string): number {
   return 12;
 }
 
+/** Every row, front to back. Index 0 is nearest the stage. */
+export const ROW_ORDER: readonly string[] = [
+  ...ROWS_STALLS,
+  ...ROWS_CIRCLE,
+  ...ROWS_BALCONY,
+];
+
 function rowIndex(row: string): number {
-  const all = [...ROWS_STALLS, ...ROWS_CIRCLE, ...ROWS_BALCONY];
-  return all.indexOf(row);
+  return ROW_ORDER.indexOf(row);
 }
 
 function strobeFor(row: string): StrobeExposure {
@@ -200,7 +206,7 @@ export const VENUE_ACCESS: VenueAccessInfo = {
   signInterpreterPosition:
     "Interpreter stands downstage left for signed performances. The sightline is lost from stalls and circle seats 1 to 3, and from the balcony.",
   strobeWarning:
-    "This production uses strobe lighting. Exposure is high in rows A to D, low in rows E to H, and negligible from row J back.",
+    "Strobe use varies by performance — see the individual event for its lighting profile and the rows it affects.",
 };
 
 export function seatById(id: string): Seat | undefined {

@@ -1,4 +1,5 @@
 import { HALL } from "./hall";
+import { isk } from "@/lib/format";
 import type { Seat, SeatGroup, SeatQuery, StrobeExposure } from "./types";
 
 const STROBE_RANK: Record<StrobeExposure, number> = { none: 0, low: 1, high: 2 };
@@ -191,7 +192,7 @@ export function describeSeat(seat: Seat): string {
   const parts: string[] = [];
   parts.push(
     `Seat ${seat.id}: row ${seat.row}, seat ${seat.number}, in the ${seat.section}. ` +
-      `${seat.priceIsk.toLocaleString("is-IS")} kr.`,
+      `${isk(seat.priceIsk)} kr.`,
   );
   parts.push(
     seat.stepsToReach === 0

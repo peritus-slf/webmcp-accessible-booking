@@ -1,6 +1,7 @@
 import { HALL, VENUE_ACCESS, seatById } from "@/lib/venue/hall";
 import { describeSeat, findSeats } from "@/lib/venue/query";
 import type { SeatQuery, StrobeExposure } from "@/lib/venue/types";
+import { isk } from "@/lib/format";
 
 /**
  * The tool contract for Aurora Hall.
@@ -111,7 +112,7 @@ const findSeatsTool: ToolDefinition<SeatQuery> = {
     const lines = groups.map((g, i) => {
       const seats = g.seats.map((s) => s.id).join(" and ");
       const compromise = g.compromises.length > 0 ? ` ${g.compromises.join(" ")}` : "";
-      return `${i + 1}. ${seats} — ${g.totalPriceIsk.toLocaleString("is-IS")} kr total. ${g.rationale}${compromise}`;
+      return `${i + 1}. ${seats} — ${isk(g.totalPriceIsk)} kr total. ${g.rationale}${compromise}`;
     });
     return `${groups.length} option${groups.length === 1 ? "" : "s"} found.\n${lines.join("\n")}`;
   },
@@ -244,7 +245,7 @@ const completeBookingTool: ToolDefinition<{ confirm: boolean }> = {
       hasBay && companion
         ? ` The companion ticket for ${companion.id} is free, so it is not charged.`
         : "";
-    return `Booked ${seats.map((s) => s.id).join(" and ")}. Total ${total.toLocaleString("is-IS")} kr.${companionNote} A confirmation with the step-free route and your access notes has been sent.`;
+    return `Booked ${seats.map((s) => s.id).join(" and ")}. Total ${isk(total)} kr.${companionNote} A confirmation with the step-free route and your access notes has been sent.`;
   },
 };
 

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { HALL } from "@/lib/venue/hall";
 import type { Seat } from "@/lib/venue/types";
+import { isk } from "@/lib/format";
 
 /**
  * The seating plan.
@@ -37,7 +38,7 @@ function seatLabel(seat: Seat, state: "available" | "held" | "booked" | "sold"):
   if (seat.captionScreenVisible) bits.push("captions visible");
   else bits.push("captions not visible");
   if (seat.strobeExposure !== "none") bits.push(`${seat.strobeExposure} strobe`);
-  bits.push(`${seat.priceIsk.toLocaleString("is-IS")} kr`);
+  bits.push(`${isk(seat.priceIsk)} kr`);
 
   bits.push(
     state === "sold"

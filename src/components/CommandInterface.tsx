@@ -148,7 +148,7 @@ export function CommandInterface() {
         ref={dialogRef}
         onClose={() => setOpen(false)}
         aria-labelledby="command-title"
-        className="w-full max-w-2xl rounded-lg p-0 backdrop:bg-slate-900/50 dark:bg-slate-900 dark:text-slate-100"
+        className="rounded-lg p-0 text-slate-900 dark:bg-slate-900 dark:text-slate-100"
       >
         <form method="dialog" className="sr-only">
           <button type="submit">Close</button>

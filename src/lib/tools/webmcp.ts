@@ -30,9 +30,14 @@ interface ModelContext {
     options?: { signal?: AbortSignal; exposedTo?: string[] },
   ): Promise<void>;
   getTools(options?: { fromOrigins?: string[] }): Promise<RegisteredTool[]>;
+  /**
+   * Implementations disagree on the input shape. Chrome's documentation shows
+   * a JSON string; ChatGPT's browser rejects that with "executeTool requires
+   * an object input". The type admits both and `callTool` below tries each.
+   */
   executeTool(
     tool: RegisteredTool,
-    input: string,
+    input: string | Record<string, unknown>,
     options?: { signal?: AbortSignal },
   ): Promise<string | null>;
   addEventListener(type: "toolchange", listener: () => void): void;
@@ -54,6 +59,29 @@ export function getModelContext(): ModelContext | undefined {
 
 export function isWebMcpAvailable(): boolean {
   return getModelContext() !== undefined;
+}
+
+/**
+ * Invoke a tool through WebMCP, tolerating either input convention.
+ *
+ * Chrome's reference documentation passes a JSON string. ChatGPT's browser
+ * requires an object and rejects a string outright. Rather than betting on one,
+ * try the object form and fall back to the string form. A WebMCP demo that only
+ * runs in one implementation of WebMCP would be a poor demonstration of it.
+ */
+export async function callTool(
+  mc: ModelContext,
+  tool: RegisteredTool,
+  input: Record<string, unknown>,
+): Promise<string | null> {
+  try {
+    return await mc.executeTool(tool, input);
+  } catch (error) {
+    if (error instanceof TypeError || String(error).includes("object input")) {
+      return mc.executeTool(tool, JSON.stringify(input));
+    }
+    throw error;
+  }
 }
 
 /**

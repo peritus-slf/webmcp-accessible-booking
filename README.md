@@ -69,8 +69,13 @@ patron combines:
 > loop. A clear view of the caption unit. Step-free. No strobe — I have
 > photosensitive epilepsy.
 
-In Aurora Hall **exactly one** pair satisfies all of that: `N-2` and `N-3`. One
-correct answer in 330.
+In Aurora Hall **two** pairs satisfy all of that: `N-2 + N-3` and `N-4 + N-5`.
+Two viable answers out of 330 seats — and the only reason you know that is that
+something searched.
+
+Drop the induction-loop requirement and it becomes four. Keep it and the two
+bays at the back of the stalls fall away, because the loop does not reach row L.
+That is the sort of interaction nobody reasons about one `aria-label` at a time.
 
 That is not a discoverability problem you can label your way out of. It is a
 *query*. The seating plan here is built properly — ARIA grid pattern, semantic

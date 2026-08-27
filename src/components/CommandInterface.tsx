@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TOOLS, toolByName } from "@/lib/tools/registry";
-import { getModelContext, type RegisteredTool } from "@/lib/tools/webmcp";
+import { callTool, getModelContext, type RegisteredTool } from "@/lib/tools/webmcp";
 
 /**
  * The command interface — the second consumer of the tool contract.
@@ -112,7 +112,7 @@ export function CommandInterface() {
         const registered: RegisteredTool[] = await mc.getTools();
         const match = registered.find((t) => t.name === tool.name);
         if (match) {
-          const output = await mc.executeTool(match, JSON.stringify(input));
+          const output = await callTool(mc, match, input);
           setRoute("webmcp");
           setResult(output ?? "The page navigated before a result came back.");
           return;

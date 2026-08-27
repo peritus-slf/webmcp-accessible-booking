@@ -97,25 +97,71 @@ function totalPrice(seats: Seat[]): number {
  * single most common way an "accessible" booking turns out to be useless.
  */
 function wheelchairGroups(q: SeatQuery): Seat[][] {
-  const bays = HALL.filter(
-    (s) => s.wheelchairSpace && matches({ ...s, status: s.status }, { ...q, stepFree: q.stepFree }),
-  );
   const wanted = q.wheelchairSpaces ?? 0;
   if (wanted === 0) return [];
 
-  const groups: Seat[][] = [];
-  for (const bay of bays) {
-    const neighbours = HALL.filter(
+  const bays = HALL.filter((s) => s.wheelchairSpace && matches(s, q));
+
+  /**
+   * The companion seat beside a bay.
+   *
+   * Where a companion seat sits between two bays it can be claimed by either,
+   * so prefer one that is not contested. Offering the same seat as the
+   * companion for two different bays reads as two options and is really one.
+   */
+  const companionFor = (bay: Seat): Seat | undefined => {
+    const candidates = HALL.filter(
       (s) =>
         s.row === bay.row &&
         Math.abs(s.number - bay.number) === 1 &&
         s.status === "available" &&
         s.companionSeat,
     );
-    if (q.companionSeat && neighbours.length === 0) continue;
-    groups.push(q.companionSeat ? [bay, neighbours[0]] : [bay]);
+    const uncontested = candidates.find(
+      (c) =>
+        !HALL.some(
+          (s) =>
+            s.wheelchairSpace &&
+            s.id !== bay.id &&
+            s.row === c.row &&
+            Math.abs(s.number - c.number) === 1,
+        ),
+    );
+    return uncontested ?? candidates[0];
+  };
+
+  // One bay wanted: every qualifying bay is its own option. Returning only the
+  // first would understate what is available, which is the opposite of the job.
+  if (wanted === 1) {
+    const groups: Seat[][] = [];
+    for (const bay of bays) {
+      const companion = companionFor(bay);
+      if (q.companionSeat && !companion) continue;
+      groups.push(q.companionSeat && companion ? [bay, companion] : [bay]);
+    }
+    return groups;
   }
-  return groups.slice(0, Math.max(1, wanted));
+
+  // More than one bay: they have to be in the same row, or the party is split
+  // across the house, which defeats the point of booking together.
+  const byRow = new Map<string, Seat[]>();
+  for (const bay of bays) {
+    const list = byRow.get(bay.row) ?? [];
+    list.push(bay);
+    byRow.set(bay.row, list);
+  }
+
+  const groups: Seat[][] = [];
+  for (const list of byRow.values()) {
+    if (list.length < wanted) continue;
+    const chosen = [...list].sort((a, b) => a.number - b.number).slice(0, wanted);
+    const companions = q.companionSeat
+      ? chosen.map(companionFor).filter((s): s is Seat => Boolean(s))
+      : [];
+    if (q.companionSeat && companions.length < wanted) continue;
+    groups.push([...chosen, ...companions]);
+  }
+  return groups;
 }
 
 function search(q: SeatQuery): SeatGroup[] {

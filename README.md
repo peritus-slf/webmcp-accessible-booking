@@ -122,6 +122,37 @@ constraints are relaxed in a fixed order and the result says exactly what was
 given up. Step-free access and strobe limits are relaxed last. A caller is never
 handed a seat that quietly fails a stated access need.
 
+## Consequential actions, and a bug the agent found
+
+An early version of `complete_booking` took no seat argument. It booked
+everything on hold.
+
+Testing in ChatGPT's browser, the agent held two candidate pairs — sensible,
+they were both viable — and was then asked to book one of them. It called the
+only tool available, correctly, and bought all four seats. 32.000 kr instead of
+20.500 kr.
+
+**The agent did nothing wrong.** The contract was underspecified on an action
+that charges money and cannot be undone, so the agent faithfully executed the
+underspecification. That is the whole argument of this demo pointed back at
+itself: if the site defines the surface badly, the agent inherits the badness.
+Exposing capability to agents raises the cost of a vague tool, it does not lower
+it.
+
+So the consequential tools now:
+
+- **Name their targets.** `complete_booking` requires the exact seats to buy.
+  Seats left on hold are not booked and not charged.
+- **Refuse rather than infer.** Naming a seat that is not on hold is an error,
+  not a best guess. Money is not a place for inference.
+- **Report what they did not do.** The result states which seats remain held and
+  uncharged. Silence about the remainder is how someone ends up paying for seats
+  nobody asked for.
+- **Are marked `readOnlyHint: false`**, so a client can apply its own
+  confirmation policy before invoking them.
+
+`release_held_seats` takes seat identifiers for the same reason.
+
 ## Running it
 
 ```bash

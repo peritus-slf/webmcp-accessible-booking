@@ -201,43 +201,87 @@ const holdSeatsTool: ToolDefinition<{ seatIds: string[] }> = {
   },
 };
 
-const releaseSeatsTool: ToolDefinition = {
+const releaseSeatsTool: ToolDefinition<{ seatIds?: string[] }> = {
   name: "release_held_seats",
-  description: "Release every seat currently on hold, returning them to general availability.",
-  inputSchema: { type: "object", properties: {}, additionalProperties: false },
-  async execute() {
-    if (state.held.length === 0) return "There are no seats on hold.";
-    const released = [...state.held];
-    setState({ held: [] });
-    return `Released ${released.join(" and ")}.`;
-  },
-};
-
-const completeBookingTool: ToolDefinition<{ confirm: boolean }> = {
-  name: "complete_booking",
   description:
-    "Complete the booking for the seats currently on hold. This is the final, consequential step. The free companion ticket is applied here if a wheelchair bay is part of the booking.",
+    "Release held seats back to general availability. Name the seats to release; omit seatIds only when you intend to release every held seat.",
   inputSchema: {
     type: "object",
     properties: {
-      confirm: { type: "boolean", description: "Must be true. The caller confirms the booking should be completed." },
+      seatIds: {
+        type: "array",
+        items: { type: "string" },
+        description:
+          "The held seats to release, for example ['N-4','N-5']. Omit to release all of them.",
+      },
     },
-    required: ["confirm"],
     additionalProperties: false,
   },
-  async execute({ confirm }) {
+  annotations: { readOnlyHint: false },
+  async execute({ seatIds } = {}) {
+    if (state.held.length === 0) return "There are no seats on hold.";
+
+    if (!seatIds || seatIds.length === 0) {
+      const released = [...state.held];
+      setState({ held: [] });
+      return `Released all held seats: ${released.join(" and ")}.`;
+    }
+
+    const notHeld = seatIds.filter((id) => !state.held.includes(id));
+    if (notHeld.length > 0) {
+      return `Nothing released. These seats are not on hold: ${notHeld.join(", ")}. Currently on hold: ${state.held.join(", ")}.`;
+    }
+
+    const stillHeld = state.held.filter((id) => !seatIds.includes(id));
+    setState({ held: stillHeld });
+    const keptNote = stillHeld.length > 0 ? ` Still on hold: ${stillHeld.join(", ")}.` : "";
+    return `Released ${seatIds.join(" and ")}.${keptNote}`;
+  },
+};
+
+const completeBookingTool: ToolDefinition<{ seatIds: string[]; confirm: boolean }> = {
+  name: "complete_booking",
+  description:
+    "Complete the booking for specific held seats. This is the final, consequential step and it charges money. You must name exactly the seats to buy — seats left on hold are not booked and not charged. The free companion ticket is applied here if a wheelchair bay is part of the booking.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      seatIds: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 1,
+        maxItems: 8,
+        description:
+          "Exactly the seats to buy, for example ['N-2','N-3']. Every one must currently be on hold. Any other held seat is left alone.",
+      },
+      confirm: { type: "boolean", description: "Must be true. The caller confirms the booking should be completed." },
+    },
+    required: ["seatIds", "confirm"],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false },
+  async execute({ seatIds, confirm }) {
     if (!confirm) return "Booking not completed. Set confirm to true to go ahead.";
     if (state.held.length === 0) return "There are no seats on hold, so there is nothing to book.";
 
-    const seats = state.held.map((id) => seatById(id)!);
+    // Never infer which seats were meant. Booking charges money and cannot be
+    // undone here, so an ambiguous request is refused rather than guessed at.
+    const notHeld = seatIds.filter((id) => !state.held.includes(id));
+    if (notHeld.length > 0) {
+      return `Not booked. These seats are not on hold: ${notHeld.join(", ")}. Currently on hold: ${state.held.join(", ")}. Hold them first, or name only the seats that are held.`;
+    }
+
+    const seats = seatIds.map((id) => seatById(id)!);
     const hasBay = seats.some((s) => s.wheelchairSpace);
     const companion = seats.find((s) => s.companionSeat);
     const chargeable = hasBay && companion ? seats.filter((s) => s.id !== companion.id) : seats;
     const total = chargeable.reduce((sum, s) => sum + s.priceIsk, 0);
 
+    const stillHeld = state.held.filter((id) => !seatIds.includes(id));
+
     setState({
-      booked: [...state.booked, ...state.held],
-      held: [],
+      booked: [...state.booked, ...seatIds],
+      held: stillHeld,
       companionTicketApplied: hasBay && Boolean(companion),
     });
 
@@ -245,7 +289,13 @@ const completeBookingTool: ToolDefinition<{ confirm: boolean }> = {
       hasBay && companion
         ? ` The companion ticket for ${companion.id} is free, so it is not charged.`
         : "";
-    return `Booked ${seats.map((s) => s.id).join(" and ")}. Total ${isk(total)} kr.${companionNote} A confirmation with the step-free route and your access notes has been sent.`;
+    // Say what was deliberately left alone. Silence about the rest is how a
+    // caller ends up paying for seats nobody asked for.
+    const remainingNote =
+      stillHeld.length > 0
+        ? ` Still on hold and NOT booked or charged: ${stillHeld.join(", ")}. Release them if you do not want them.`
+        : "";
+    return `Booked ${seats.map((s) => s.id).join(" and ")}. Total ${isk(total)} kr.${companionNote}${remainingNote} A confirmation with the step-free route and your access notes has been sent.`;
   },
 };
 

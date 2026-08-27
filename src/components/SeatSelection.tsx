@@ -251,14 +251,15 @@ export function SeatSelection({ event }: { event: VenueEvent }) {
       {view === "plan" ? (
         <div
           ref={gridRef}
-          role="grid"
-          aria-labelledby="seats-heading"
-          aria-rowcount={rows.length}
           className="mt-5 overflow-x-auto rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
         >
           <p className="mb-2 text-center text-xs uppercase tracking-widest text-slate-500">Stage</p>
           <div aria-hidden="true" className="mb-4 h-1 rounded bg-slate-300 dark:bg-slate-600" />
 
+          {/* role="grid" wraps the rows and nothing else. A grid may only
+              contain rows or rowgroups, so the stage marker and the legend
+              have to sit outside it. */}
+          <div role="grid" aria-labelledby="seats-heading" aria-rowcount={rows.length}>
           {rows.map((entry, rowIdx) => (
             <div key={entry.row} role="row" aria-rowindex={rowIdx + 1} className="mb-1 flex items-center gap-1">
               <span role="rowheader" className="w-6 shrink-0 text-right text-xs font-medium text-slate-500">
@@ -302,6 +303,7 @@ export function SeatSelection({ event }: { event: VenueEvent }) {
               })}
             </div>
           ))}
+          </div>
 
           <Legend />
         </div>

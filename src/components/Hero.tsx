@@ -24,13 +24,39 @@ export function Hero({ featured }: { featured: VenueEvent }) {
       aria-labelledby="hero-heading"
       className="relative isolate -mt-8 mx-[calc(50%-50vw)] w-screen overflow-hidden bg-slate-950 px-6 py-24 text-white sm:py-32"
     >
-      {/* Decorative. Nothing here carries meaning the text does not. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-slate-950" />
-        <div className="aurora-a absolute -left-1/4 top-[-30%] h-[140%] w-[90%] rounded-full bg-[radial-gradient(closest-side,rgba(56,189,248,0.55),transparent)] blur-3xl" />
-        <div className="aurora-b absolute -right-1/4 bottom-[-40%] h-[140%] w-[90%] rounded-full bg-[radial-gradient(closest-side,rgba(167,139,250,0.5),transparent)] blur-3xl" />
-        <div className="aurora-a absolute left-1/3 top-[-20%] h-[120%] w-[60%] rounded-full bg-[radial-gradient(closest-side,rgba(45,212,191,0.32),transparent)] blur-3xl [animation-delay:-12s]" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,0.92),rgba(2,6,23,0.15))]" />
+      {/*
+        Decorative. Nothing here carries meaning the text does not.
+
+        The colour fields blend with `screen`, which adds light the way real
+        overlapping light does — two fields crossing go brighter and shift hue
+        rather than one flatly covering the other. That, plus the grain below,
+        is most of the difference between this and a WebGL shader; the rest is
+        just slower keyframes.
+      */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-slate-950">
+        <div className="absolute inset-0 [mix-blend-mode:screen]">
+          <div className="aurora-a absolute -left-1/4 top-[-35%] h-[150%] w-[95%] rounded-full bg-[radial-gradient(closest-side,rgba(56,189,248,0.62),transparent)] blur-[90px]" />
+          <div className="aurora-b absolute -right-1/4 bottom-[-45%] h-[150%] w-[95%] rounded-full bg-[radial-gradient(closest-side,rgba(167,139,250,0.58),transparent)] blur-[90px]" />
+          <div className="aurora-a absolute left-1/4 top-[-25%] h-[130%] w-[65%] rounded-full bg-[radial-gradient(closest-side,rgba(45,212,191,0.4),transparent)] blur-[100px] [animation-delay:-14s]" />
+          <div className="aurora-b absolute right-1/3 top-[10%] h-[110%] w-[55%] rounded-full bg-[radial-gradient(closest-side,rgba(232,121,249,0.28),transparent)] blur-[110px] [animation-delay:-26s]" />
+        </div>
+
+        {/*
+          Film grain. Banding is what makes a large CSS gradient look cheap —
+          eight-bit colour cannot describe a smooth ramp across 1500px, so it
+          steps. A little noise dithers the steps away. Inline SVG, so it costs
+          no request and cannot fail to load.
+        */}
+        <div
+          className="absolute inset-0 opacity-[0.16] [background-size:180px_180px]"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E\")",
+          }}
+        />
+
+        {/* Grounds the text against the brightest part of the drift. */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,0.94),rgba(2,6,23,0.1))]" />
       </div>
 
       <div className="mx-auto max-w-6xl px-0 sm:px-2">

@@ -2,31 +2,22 @@ import Link from "next/link";
 import { EVENTS } from "@/lib/venue/events";
 import { AccessBadges } from "@/components/AccessBadges";
 import { EventPoster } from "@/components/EventPoster";
+import { Hero } from "@/components/Hero";
 
 export default function Home() {
   return (
     <>
-      <section aria-labelledby="intro-heading">
-        <h1 id="intro-heading" className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          What&rsquo;s on at Aurora Hall
-        </h1>
-        <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-400">
-          Every performance lists its access provision up front — captions,
-          interpretation, strobe, relaxed staging — because you should be able to
-          rule a night out before you get as far as the seating plan.
-        </p>
-        <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-          Accessible seating is booked here, like every other seat. There is no
-          separate phone line you are obliged to use.
-        </p>
-      </section>
+      <Hero featured={EVENTS[0]} />
 
-      <section aria-labelledby="events-heading" className="mt-10">
-        <h2 id="events-heading" className="sr-only">
-          Upcoming performances
+      <section aria-labelledby="events-heading" className="mt-16 scroll-mt-8" id="whats-on">
+        <h2 id="events-heading" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          The autumn season
         </h2>
+        <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-400">
+          Six performances between September and October.
+        </p>
 
-        <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {EVENTS.map((event) => (
             <li key={event.slug} className="rise">
               <article

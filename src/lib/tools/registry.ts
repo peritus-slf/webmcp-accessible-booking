@@ -59,6 +59,45 @@ function eventOrError(slug: string): EventLookup {
 
 // --- Discovery -------------------------------------------------------------
 
+/**
+ * What this site can do about access — the tool that makes the footer link
+ * survivable.
+ *
+ * Aurora Hall is built like a normal commercial venue site: a loud hero, a
+ * pre-registration banner, and the access page one link down in the footer.
+ * That is not an oversight, it is the realistic case. Almost nobody finds that
+ * link, and the patrons who most need it are the least likely to go hunting
+ * through a dark marketing page for it.
+ *
+ * An agent reading this contract finds it immediately. That is the argument:
+ * the site does not have to be redesigned around disabled users, it has to
+ * expose a real tool contract — and then a buried capability becomes a
+ * capability the agent can offer unprompted.
+ */
+const accessCapabilitiesTool: ToolDefinition = {
+  name: "get_access_capabilities",
+  description:
+    "What this site can do for a patron with access requirements. Call this early — on arrival or once someone signs in — to find out what is available before searching for anything. Covers saved access profiles, per-performance access data, seat filtering by access need, and the companion-ticket policy.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  annotations: { readOnlyHint: true },
+  async execute() {
+    const { user } = getState();
+    return [
+      "Aurora Hall supports the following, all bookable online with no phone call:",
+      "",
+      "1. SAVED ACCESS PROFILE — a signed-in patron records their requirements once (wheelchair bays, companion seat, transfer seat, assistance dog, induction loop, caption and interpreter sightlines, step-free routes, strobe limits). Read it with get_my_access_profile and apply it by passing useMyAccessProfile:true to find_seats. Do not interrogate someone for needs they have already recorded.",
+      "2. PER-PERFORMANCE ACCESS DATA — captions, interpretation, audio description, relaxed staging and the lighting rig differ by night, not by venue. list_events and get_event carry it.",
+      "3. SEAT-LEVEL FILTERING — find_seats searches on access requirements directly and returns groups that sit together. It states any requirement it could not meet rather than quietly returning an unsuitable seat.",
+      "4. FREE COMPANION TICKET — one companion ticket is free with every wheelchair booking. It is applied at complete_booking automatically; nobody has to ask for it.",
+      "5. VENUE FACILITIES — step-free entrances, accessible toilets, loop coverage, quiet room and assistance-dog policy, via get_venue_access_info.",
+      "",
+      user
+        ? `${user.name} is signed in and has a saved access profile. Read it before searching, and offer to apply it rather than asking them to restate their needs.`
+        : "Nobody is signed in yet. The saved-profile features need a signed-in patron; an agent cannot sign in on someone's behalf here, so ask them to sign in on the site.",
+    ].join("\n");
+  },
+};
+
 const listEventsTool: ToolDefinition<{ relaxedOnly?: boolean; captionedOnly?: boolean }> = {
   name: "list_events",
   description:
@@ -451,6 +490,7 @@ const myBookingsTool: ToolDefinition = {
 
 /** Every tool this site exposes. Both consumers read from this array. */
 export const TOOLS: ToolDefinition<never>[] = [
+  accessCapabilitiesTool,
   listEventsTool,
   getEventTool,
   accessProfileTool,

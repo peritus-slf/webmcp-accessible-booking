@@ -23,11 +23,23 @@ import { registerAllTools } from "@/lib/tools/webmcp";
  *    single most common way sites fail this.
  */
 
+/**
+ * Primary navigation, as a commercial venue would actually run it.
+ *
+ * "Access" is NOT here. It sits in the footer, which is where almost every
+ * real ticketing site puts it — and that is deliberate. A site that foregrounds
+ * its access page demonstrates good intentions; a site that buries it exactly
+ * like everyone else, and still serves a disabled patron properly because the
+ * tool contract underneath is real, demonstrates what WebMCP is for.
+ *
+ * The information is not hidden from anyone: it is one footer link away for a
+ * person, and `get_access_capabilities` for an agent, which is how the agent
+ * comes to offer it unprompted.
+ */
 const NAV = [
   { href: "/", label: "What's on" },
-  { href: "/access", label: "Access" },
-  { href: "/account", label: "My access profile" },
   { href: "/bookings", label: "My bookings" },
+  { href: "/account", label: "My account" },
 ];
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
@@ -141,8 +153,18 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           {/* 3.2.6 Consistent Help — same place, every page. */}
           <section id="access-help" aria-labelledby="access-help-heading">
             <h2 id="access-help-heading" className="text-sm font-semibold">
-              Access help
+              Access
             </h2>
+            <p className="mt-2 text-sm">
+              <Link
+                href="/access"
+                className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+              >
+                Access at Aurora Hall
+              </Link>{" "}
+              — step-free routes, induction loop, captions, quiet room,
+              assistance dogs, companion tickets.
+            </p>
             <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
               The access line is open 10:00–18:00 on{" "}
               <a

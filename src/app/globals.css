@@ -115,6 +115,50 @@ dialog::backdrop {
       background-color 120ms ease-out,
       border-color 120ms ease-out;
   }
+
+  /*
+    The hero aurora.
+
+    Two large blurred colour fields drifting across each other over half a
+    minute. Slow enough that you notice it only if you look, which is the
+    entire brief for a background: atmosphere, never an event.
+
+    Why this is safe rather than merely tolerated:
+      - It never flashes. WCAG 2.3.1 is about flashes above 3 Hz; a 34-second
+        cycle is four orders of magnitude away from that.
+      - It moves the background, not the page. No parallax against scroll,
+        which is the pattern that triggers vestibular symptoms.
+      - It is decorative and sits behind text that never moves with it.
+      - Anyone who has asked for reduced motion never sees it at all, which is
+        the accepted mechanism for 2.2.2 on decorative motion.
+  */
+  @keyframes aurora-drift-a {
+    0%,
+    100% {
+      transform: translate3d(-6%, -3%, 0) scale(1.15);
+    }
+    50% {
+      transform: translate3d(5%, 4%, 0) scale(1.25);
+    }
+  }
+
+  @keyframes aurora-drift-b {
+    0%,
+    100% {
+      transform: translate3d(6%, 4%, 0) scale(1.2);
+    }
+    50% {
+      transform: translate3d(-5%, -4%, 0) scale(1.1);
+    }
+  }
+
+  .aurora-a {
+    animation: aurora-drift-a 34s ease-in-out infinite;
+  }
+
+  .aurora-b {
+    animation: aurora-drift-b 44s ease-in-out infinite;
+  }
 }
 
 /*

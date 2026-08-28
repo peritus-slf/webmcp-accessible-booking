@@ -4,7 +4,7 @@ import { INFO_TOPICS, infoTopicBySlug } from "@/lib/venue/information";
 import { describeSeat, findSeats, seatsForEvent } from "@/lib/venue/query";
 import type { SeatQuery, StrobeExposure } from "@/lib/venue/types";
 import { isk } from "@/lib/format";
-import { NO_FILTERS, bookingReference, getState, setState, updateSignupAccess, type EventFilters } from "@/lib/store";
+import { NO_FILTERS, bookingReference, getState, setState, updateSignup, updateSignupAccess, type EventFilters } from "@/lib/store";
 
 /**
  * The tool contract for Aurora Hall.
@@ -359,6 +359,57 @@ const accessProfileTool: ToolDefinition = {
     ]
       .filter(Boolean)
       .join(" ");
+  },
+};
+
+/**
+ * Fill the identity step of a sign-up in progress.
+ *
+ * The agent types into a form the person is looking at, exactly as a password
+ * manager or a browser autofill does. They read it, correct it, and press
+ * Create account themselves — which is still not a tool, and still the line.
+ *
+ * On `password`: accepted, because a demonstration that made someone type one
+ * by hand would be pretending autofill does not exist. But a password manager
+ * is the right source for a real one — it has a vault, and a model's context is
+ * not a vault. The tool description says so, so an agent reading the contract
+ * is told rather than left to guess.
+ */
+const signupDetailsTool: ToolDefinition<{ name?: string; email?: string; password?: string }> = {
+  name: "set_signup_details",
+  description:
+    "Fill in the name, email and password on a sign-up that is in progress, so the person does not retype details you already know. Only works while they are on the sign-up form. It fills the form for them to check and submit; it cannot create the account. Prefer a password manager as the source of a real password — pass one here only when the person has asked you to.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Full name, as it should appear on the booking." },
+      email: { type: "string", description: "Email address for confirmations." },
+      password: { type: "string", description: "Password, at least eight characters. Optional." },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false },
+  async execute(input = {}) {
+    const state = getState();
+    if (!state.signup) {
+      return "Nobody is part-way through creating an account. Ask them to start one at /signup — an agent cannot create an account here, by design — and call this again once they are on the form.";
+    }
+
+    const patch: Record<string, string> = {};
+    if (typeof input.name === "string" && input.name.trim()) patch.name = input.name.trim();
+    if (typeof input.email === "string" && input.email.trim()) patch.email = input.email.trim();
+    if (typeof input.password === "string" && input.password) patch.password = input.password;
+
+    if (Object.keys(patch).length === 0) return "Nothing to fill in — no details were given.";
+
+    updateSignup({ ...patch, detailsPrefilled: true, step: 1 });
+
+    const filled = Object.keys(patch).map((k) => (k === "password" ? "password" : k));
+    const short =
+      patch.password !== undefined && patch.password.length < 8
+        ? " The password is under eight characters and the form will reject it."
+        : "";
+    return `Filled in ${filled.join(", ")} on the sign-up form. Ask them to check it before continuing.${short} Nothing is saved until they press Create account, which only they can do.`;
   },
 };
 
@@ -739,6 +790,7 @@ export const TOOLS: ToolDefinition<never>[] = [
   filterEventsTool,
   getEventTool,
   accessProfileTool,
+  signupDetailsTool,
   signupAccessTool,
   findSeatsTool,
   describeSeatTool,

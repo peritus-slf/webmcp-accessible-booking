@@ -78,6 +78,8 @@ export interface SignupDraft {
   access: AccessProfile;
   /** True once an agent has populated the access step, so the UI can say so. */
   accessPrefilled: boolean;
+  /** True once an agent has populated the identity step. */
+  detailsPrefilled: boolean;
 }
 
 export interface AppState {
@@ -257,7 +259,13 @@ export function resetDemo(): void {
 
 export const EMPTY_ACCESS: AccessProfile = EMPTY_PROFILE;
 
-/** Begin a sign-up, or return the one in progress. */
+/**
+ * Begin a sign-up, or return the one in progress.
+ *
+ * Starts blank. Both steps are fillable by an agent — `set_signup_details` for
+ * the identity fields, `set_signup_access_preferences` for the access ones —
+ * and neither can submit it. The person reviews and creates the account.
+ */
 export function startSignup(): SignupDraft {
   if (state.signup) return state.signup;
   const draft: SignupDraft = {
@@ -267,6 +275,7 @@ export function startSignup(): SignupDraft {
     password: "",
     access: EMPTY_PROFILE,
     accessPrefilled: false,
+    detailsPrefilled: false,
   };
   setState({ signup: draft });
   return draft;

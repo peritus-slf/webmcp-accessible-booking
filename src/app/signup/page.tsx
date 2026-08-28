@@ -93,7 +93,12 @@ export default function SignUpPage() {
       </h1>
 
       <div className="mt-3 rounded-lg border border-sky-700 bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-100">
-        Demonstration only. Nothing is sent anywhere and no credential is stored.
+        <p className="font-medium">This is a demonstration.</p>
+        <p className="mt-1">
+          Nothing is sent anywhere and no credential is stored. Fill this in
+          yourself, or ask an assistant to — it can complete both steps, but it
+          cannot create the account. That is still your click.
+        </p>
       </div>
 
       {/* 1.3.1 / 4.1.2 — progress announced, not conveyed by styling alone. */}
@@ -131,6 +136,12 @@ export default function SignUpPage() {
 
       {step === 1 && (
         <div className="mt-6 space-y-4">
+          {signup.detailsPrefilled && (
+            <p role="status" className="rounded-md border border-sky-700 bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-100">
+              An assistant filled these in. Check them before continuing —
+              nothing is saved until you create the account yourself.
+            </p>
+          )}
           <div>
             <label htmlFor="su-name" className="block text-sm font-medium">
               Full name
@@ -138,10 +149,14 @@ export default function SignUpPage() {
             <input
               id="su-name"
               autoComplete="name"
+              aria-describedby="su-name-hint"
               value={signup.name}
               onChange={(e) => updateSignup({ name: e.target.value })}
               className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
             />
+            <p id="su-name-hint" className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+              As it should appear on the booking.
+            </p>
           </div>
           <div>
             <label htmlFor="su-email" className="block text-sm font-medium">

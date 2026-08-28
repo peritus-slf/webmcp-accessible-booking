@@ -53,10 +53,21 @@ same room on a different night is a different answer.
 **It cannot.** There is no tool that creates an account, for the same reason
 there is no `sign_in`. It should say so and hand back.
 
-Start the sign-up yourself at `/signup`. Fill in name, email, password. Reach
-step 2, *Access requirements*, and stop. Then:
+Go to `/signup`. The form is **blank**. Then:
 
-> You know what I need — fill this in for me.
+> You know who I am — fill this in.
+
+**Watch for** `set_signup_details`. Name, email and password land in the fields
+and a line appears saying an assistant filled them in.
+
+**Voiceover — say this explicitly, it is the setup for everything after:**
+
+> It already knows my name and my email. I have told it before, the way you tell
+> an assistant anything. It did not have to ask, and I did not have to type.
+
+Press Continue yourself. On step 2, *Access requirements*, stop. Then:
+
+> You know what I need — fill this in too.
 
 **Watch for** `set_signup_access_preferences`. Six boxes tick, the note lands in
 the patron's own words, and a line appears saying an assistant filled it in and

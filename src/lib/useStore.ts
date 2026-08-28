@@ -12,6 +12,7 @@ const SERVER_SNAPSHOT: AppState = {
     audioDescribed: false,
     noStrobe: false,
   },
+  showAccessDetail: false,
   accessProfile: {
     wheelchairSpaces: 0,
     companionSeat: false,

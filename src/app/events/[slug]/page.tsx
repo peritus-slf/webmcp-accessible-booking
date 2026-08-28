@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EVENTS, accessSummary, eventBySlug } from "@/lib/venue/events";
-import { AccessBadges } from "@/components/AccessBadges";
+import { AccessDisclosure } from "@/components/AccessDisclosure";
 import { EventBooking } from "@/components/EventBooking";
 import { EventPoster } from "@/components/EventPoster";
 
@@ -74,24 +74,18 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
         <p className="mt-5 max-w-3xl">{event.description}</p>
 
-        <section aria-labelledby="event-access-heading" className="mt-8">
-          <h2 id="event-access-heading" className="text-xl font-semibold">
-            Access at this performance
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">
-            Access provision belongs to the performance, not the building. The
-            same room on a different night has a different lighting rig and a
-            different set of services.
-          </p>
-          <div className="mt-4">
-            <AccessBadges event={event} showDetail />
-          </div>
-          <ul className="mt-4 max-w-3xl list-disc space-y-1 pl-5 text-sm">
-            {accessSummary(event).map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-        </section>
+        {/*
+          The strobe line stays here, in the page body, never behind a
+          disclosure. Everything else about the performance's access provision
+          is detail; a seizure warning is not.
+        */}
+        <p className="mt-6 max-w-3xl text-sm font-medium">{accessSummary(event)[0]}</p>
+
+        <AccessDisclosure
+          heading="Access at this performance"
+          intro="Access provision belongs to the performance, not the building. The same room on a different night has a different lighting rig and a different set of services."
+          notes={accessSummary(event)}
+        />
 
         {event.soldOut ? (
           <p className="mt-8 rounded-lg border border-slate-300 p-4 dark:border-slate-700">

@@ -139,12 +139,25 @@ Ask ChatGPT, without navigating anywhere:
 come back with the lowered counter at 760 mm *and* the fact that staff will
 bring an order to your seat if you ask on arrival.
 
+Then, on screen, show the page itself: the access detail is behind a collapsed
+disclosure. Ask ChatGPT:
+
+> Can you just show me the access detail everywhere on this site?
+
+**Watch for** `set_access_detail` — the panels open across the whole site while
+you watch.
+
 **Voiceover:**
 
 > That is on a page in the footer, four clicks from the front door, under
 > "Food and drink" — where every venue puts it and nobody finds it. The access
 > detail is attached to the thing it describes rather than filed on an
 > accessibility page, so the agent can reach it.
+>
+> And note what just happened: the panels were collapsed, not missing. The
+> agent opened them. You could have clicked one, or ticked the box on your
+> account. Three routes to the same information, and the page still looks like
+> a venue page to everybody else.
 >
 > Ask a real venue website this and it cannot answer. You phone, during office
 > hours, and explain why you are asking.

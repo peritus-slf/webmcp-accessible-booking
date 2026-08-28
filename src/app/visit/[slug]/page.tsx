@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { INFO_TOPICS, infoTopicBySlug } from "@/lib/venue/information";
+import { AccessDisclosure } from "@/components/AccessDisclosure";
 
 /**
  * A venue information page.
@@ -61,25 +62,11 @@ export default async function VisitTopicPage({ params }: { params: Promise<{ slu
         ))}
       </div>
 
-      <section
-        aria-labelledby="topic-access"
-        className="mt-10 rounded-xl border border-slate-300 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
-      >
-        <h2 id="topic-access" className="text-xl font-semibold">
-          Access — {topic.title.toLowerCase()}
-        </h2>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Specific to this, rather than filed on a separate page.
-        </p>
-        <ul className="mt-4 space-y-3">
-          {topic.access.map((note) => (
-            <li key={note} className="flex gap-3 text-sm">
-              <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-slate-500" />
-              <span>{note}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <AccessDisclosure
+        heading={`Access — ${topic.title.toLowerCase()}`}
+        intro="Specific to this, rather than filed on a separate page."
+        notes={topic.access}
+      />
 
       <nav aria-labelledby="other-topics" className="mt-10 border-t border-slate-200 pt-6 dark:border-slate-800">
         <h2 id="other-topics" className="text-sm font-semibold">

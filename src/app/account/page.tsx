@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { updateProfile, type AccessProfile } from "@/lib/store";
+import { setState, updateProfile, type AccessProfile } from "@/lib/store";
 import { useStore } from "@/lib/useStore";
 
 /**
@@ -38,7 +38,7 @@ const FIELDS: {
 ];
 
 export default function AccountPage() {
-  const { user, accessProfile } = useStore();
+  const { user, accessProfile, showAccessDetail } = useStore();
   const [saved, setSaved] = useState("");
 
   if (!user) {
@@ -136,6 +136,37 @@ export default function AccountPage() {
             })}
           </ul>
         </fieldset>
+
+        <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
+          <h3 className="text-sm font-medium">Showing access detail</h3>
+          <div className="mt-3 flex items-start gap-3">
+            <input
+              id="show-access-detail"
+              type="checkbox"
+              checked={showAccessDetail}
+              onChange={(e) => {
+                setState({ showAccessDetail: e.target.checked });
+                setSaved(
+                  e.target.checked
+                    ? "Access detail will now be shown on every page."
+                    : "Access detail is collapsed again.",
+                );
+              }}
+              className="mt-1 size-5"
+            />
+            <span>
+              <label htmlFor="show-access-detail" className="font-medium">
+                Always show access detail
+              </label>
+              <span className="block text-sm text-slate-600 dark:text-slate-400">
+                Performances and visitor-information pages keep their access
+                detail collapsed by default. This opens it everywhere. You can
+                also open any single panel by clicking it, or ask an agent to
+                turn this on for you.
+              </span>
+            </span>
+          </div>
+        </div>
 
         <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
           <h3 className="text-sm font-medium">Your note to staff</h3>

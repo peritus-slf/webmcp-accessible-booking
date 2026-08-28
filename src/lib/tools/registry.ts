@@ -91,8 +91,9 @@ const accessCapabilitiesTool: ToolDefinition = {
       "3. SEAT-LEVEL FILTERING — find_seats searches on access requirements directly and returns groups that sit together. It states any requirement it could not meet rather than quietly returning an unsuitable seat.",
       "4. FREE COMPANION TICKET — one companion ticket is free with every wheelchair booking. It is applied at complete_booking automatically; nobody has to ask for it.",
       "5. VENUE FACILITIES — step-free entrances, accessible toilets, loop coverage, quiet room and assistance-dog policy, via get_venue_access_info.",
-      "6. PRACTICAL VISIT INFORMATION — getting here, food and drink, cloakroom, groups, venue hire, families — each carrying its own access detail, via get_venue_information. Blue-badge bays, lowered bar counters, table service to a seat, powerchair storage and ear defenders all live there rather than on an accessibility page.",
-      "7. A HUMAN, if wanted — access line +354 555 0100, 10:00-18:00, or access@example.is, who reply in writing on request. Offer this alongside the site, never instead of it: everything above is bookable online without a call.",
+      "6. ACCESS DETAIL PANELS — every performance and visitor-information page carries its access detail behind a collapsed disclosure, because a venue site does not lead with them. set_access_detail opens them all at once; offer that rather than reading everything out. It changes display only.",
+      "7. PRACTICAL VISIT INFORMATION — getting here, food and drink, cloakroom, groups, venue hire, families — each carrying its own access detail, via get_venue_information. Blue-badge bays, lowered bar counters, table service to a seat, powerchair storage and ear defenders all live there rather than on an accessibility page.",
+      "8. A HUMAN, if wanted — access line +354 555 0100, 10:00-18:00, or access@example.is, who reply in writing on request. Offer this alongside the site, never instead of it: everything above is bookable online without a call.",
       "",
       user
         ? `${user.name} is signed in and has a saved access profile. Read it before searching, and offer to apply it rather than asking them to restate their needs.`
@@ -241,6 +242,45 @@ const getEventTool: ToolDefinition<{ eventSlug: string }> = {
     ]
       .filter(Boolean)
       .join("\n");
+  },
+};
+
+/**
+ * Turn the access disclosures on or off across the site.
+ *
+ * Every page keeps its access detail behind a collapsed disclosure, because a
+ * commercial venue page does not carry a large access panel and this site is
+ * meant to look like one. This opens them all at once.
+ *
+ * It changes what is SHOWN, never what can be done. Booking is identical either
+ * way, every page is fully operable with the panels closed, and nothing that
+ * could hurt somebody sits behind one — a performance's strobe warning is in
+ * the page body regardless. A collapsed panel is a reasonable home for detail
+ * and an indefensible home for a hazard.
+ *
+ * It is also not the only route: a person can click any disclosure open, or set
+ * the same preference on their account. If this tool were the only way in, the
+ * information would be agent-exclusive, which is the split this project exists
+ * to argue against.
+ */
+const accessDetailTool: ToolDefinition<{ show: boolean }> = {
+  name: "set_access_detail",
+  description:
+    "Show or hide the access detail panels across the site — on performances and on visitor-information pages. They are collapsed by default because a venue site does not lead with them. Offer this when the patron has access requirements, rather than reading the detail out yourself. Changes what is displayed, never what can be booked.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      show: { type: "boolean", description: "True to open the access panels everywhere, false to collapse them again." },
+    },
+    required: ["show"],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false },
+  async execute({ show }) {
+    setState({ showAccessDetail: show });
+    return show
+      ? "Access detail is now shown on every performance and visitor-information page. The panels were collapsed, not missing — this opens them. It can also be switched on from the account page, or a single panel opened by clicking it."
+      : "Access detail is collapsed again. Nothing has been removed; every panel can still be opened individually.";
   },
 };
 
@@ -624,6 +664,7 @@ export const TOOLS: ToolDefinition<never>[] = [
   describeSeatTool,
   venueAccessTool,
   venueInformationTool,
+  accessDetailTool,
   holdSeatsTool,
   releaseSeatsTool,
   completeBookingTool,

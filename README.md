@@ -198,6 +198,44 @@ So the consequential tools now:
 
 `release_held_seats` takes seat identifiers for the same reason.
 
+## Questions this site can answer that venue websites cannot
+
+The access detail is attached to each thing rather than filed on an
+accessibility page. "Food and drink" on a real venue site is a menu and a
+photograph; whether the bar has a lowered counter, or whether staff will carry
+an order to your seat, lives nowhere at all. Somebody who needs to know has to
+phone and ask, during office hours, and explain why.
+
+Because `get_venue_information` returns the access notes with the topic, an
+agent can answer:
+
+- *Can I get a drink in the interval without queuing at a high counter?* —
+  lowered section at 760 mm on the western end, or ask at the box office and
+  staff bring the order to your seat.
+- *Where does my powerchair go if I transfer into a seat?* — beside the
+  wheelchair bays, not four floors away in the cloakroom.
+- *Can our group of twelve book two wheelchair spaces together?* — N-2 and N-4
+  in the circle, or four across row L in the stalls. Free companion tickets
+  apply per space, not once per booking.
+- *Is the walk from the bus stop step-free?* — yes, but cross on the western
+  side; there is no dropped kerb on the eastern one.
+- *Will I have to check my medical equipment at the cloakroom?* — no, whatever
+  its size.
+- *Is there anything at this venue I actually cannot attend?* —
+  Hljóðheimar. Continuous strobe throughout the house, so no seat is offered
+  at all rather than a bad one being sold.
+
+Every one of those has a real answer here and no answer on almost any venue
+site anywhere. None of it required redesigning the site around disabled
+patrons — it required attaching the facts to the thing they describe, and
+exposing them as a tool.
+
+`/llms.txt` carries the same material for agents that arrive without WebMCP. It
+opens by telling any agent that does support it to ignore the file and read the
+contract instead, and it is generated from the same data as the pages and the
+tools, because a stale llms.txt describes a site that no longer exists,
+confidently.
+
 ## What testing actually caught
 
 Four defects, none of them found by reading the code.

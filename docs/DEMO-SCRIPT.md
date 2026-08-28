@@ -129,6 +129,32 @@ Use this if the run comes in under time. It costs twenty seconds and it is the
 only moment in the video where the entry admits something, which is worth more
 than another feature.
 
+## Beat 5c — the question no venue site can answer (20s)
+
+Ask ChatGPT, without navigating anywhere:
+
+> Can I get a drink in the interval without queuing at a high counter?
+
+**Watch for:** `get_venue_information` with `topic: "food-and-drink"`. It should
+come back with the lowered counter at 760 mm *and* the fact that staff will
+bring an order to your seat if you ask on arrival.
+
+**Voiceover:**
+
+> That is on a page in the footer, four clicks from the front door, under
+> "Food and drink" — where every venue puts it and nobody finds it. The access
+> detail is attached to the thing it describes rather than filed on an
+> accessibility page, so the agent can reach it.
+>
+> Ask a real venue website this and it cannot answer. You phone, during office
+> hours, and explain why you are asking.
+
+Good follow-ups if there is time — each has a real answer here:
+
+- *Where does my powerchair go if I transfer into a seat?*
+- *Can our group of twelve book two wheelchair spaces together?*
+- *Will I have to check my medical equipment at the cloakroom?*
+
 ## Beat 6 — parity (25s)
 
 Close ChatGPT. On the site, press **⌘K**.

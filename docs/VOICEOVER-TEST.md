@@ -3,6 +3,10 @@
 The manual pass. `npm run a11y` covers the mechanical third of accessibility;
 this covers the part that decides whether the site is actually usable.
 
+Run `npm run a11y` first and check its **exit code**, not just its output —
+piping it into `tail` masks the failure, which has already let one contrast
+regression through.
+
 Budget **30–40 minutes** for a full run. Record results in the Result column —
 including the ones that pass, because "we tested and it was fine" is a claim we
 need to be able to make honestly.

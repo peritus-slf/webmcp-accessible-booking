@@ -127,7 +127,7 @@ export function SiteFooter() {
           <Link href="/access" className="rounded hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
             Accessibility
           </Link>
-          <p className="w-full text-slate-400 sm:w-auto">
+          <p className="w-full text-slate-600 sm:w-auto dark:text-slate-400">
             A fictional venue built as a WebMCP demonstration.{" "}
             <a
               href="https://github.com/peritus-slf/saeti"

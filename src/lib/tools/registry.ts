@@ -4,7 +4,7 @@ import { INFO_TOPICS, infoTopicBySlug } from "@/lib/venue/information";
 import { describeSeat, findSeats, seatsForEvent } from "@/lib/venue/query";
 import type { SeatQuery, StrobeExposure } from "@/lib/venue/types";
 import { isk } from "@/lib/format";
-import { NO_FILTERS, bookingReference, getState, setState, type EventFilters } from "@/lib/store";
+import { NO_FILTERS, bookingReference, getState, setState, updateSignupAccess, type EventFilters } from "@/lib/store";
 
 /**
  * The tool contract for Aurora Hall.
@@ -362,6 +362,85 @@ const accessProfileTool: ToolDefinition = {
   },
 };
 
+/**
+ * Fill the access step of a sign-up in progress.
+ *
+ * Populates step 2 of the form the person is looking at. They then read it,
+ * change whatever is wrong, and submit it themselves. That is assistance with a
+ * blank form, and it is the moment where recording access needs stops being a
+ * chore someone gives up on halfway through.
+ *
+ * There is deliberately no tool that creates the account, and none that
+ * rewrites a saved profile. Establishing identity stays with the person — the
+ * same boundary as `sign_in`, and creating a persistent record on someone's
+ * behalf is a larger version of that decision rather than a smaller one.
+ */
+const signupAccessTool: ToolDefinition<{
+  wheelchairSpace?: boolean;
+  companionSeat?: boolean;
+  transferSeat?: boolean;
+  assistanceDog?: boolean;
+  hearingLoop?: boolean;
+  captionsRequired?: boolean;
+  interpreterRequired?: boolean;
+  stepFree?: boolean;
+  noStrobe?: boolean;
+  notes?: string;
+}> = {
+  name: "set_signup_access_preferences",
+  description:
+    "Fill in the access-requirements step of a sign-up that is in progress, so the person does not have to type out needs they have already told you about. Only works while someone is on the sign-up form; it fills the form for them to review and submit. It cannot create the account and cannot change an existing saved profile.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      wheelchairSpace: { type: "boolean", description: "Needs a wheelchair bay — a flat space rather than a seat." },
+      companionSeat: { type: "boolean", description: "Reserve the seat beside the bay. The companion ticket is free." },
+      transferSeat: { type: "boolean", description: "Transfers out of a wheelchair, so needs a lifting armrest." },
+      assistanceDog: { type: "boolean", description: "Comes with an assistance dog and needs floor room." },
+      hearingLoop: { type: "boolean", description: "Uses an induction loop." },
+      captionsRequired: { type: "boolean", description: "Needs a sightline to the caption unit." },
+      interpreterRequired: { type: "boolean", description: "Needs a sightline to the interpreter." },
+      stepFree: { type: "boolean", description: "Needs a step-free route." },
+      noStrobe: { type: "boolean", description: "Cannot be exposed to strobe. Never relaxed to find a seat." },
+      notes: { type: "string", description: "Anything the checkboxes cannot express, in the patron's own words." },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false },
+  async execute(input = {}) {
+    const state = getState();
+    if (!state.signup) {
+      return "Nobody is part-way through creating an account. Ask them to start one at /signup — an agent cannot create an account here, by design — and call this again once they are on the form.";
+    }
+
+    const patch: Record<string, unknown> = {};
+    if (typeof input.wheelchairSpace === "boolean") patch.wheelchairSpaces = input.wheelchairSpace ? 1 : 0;
+    for (const key of [
+      "companionSeat",
+      "transferSeat",
+      "assistanceDog",
+      "hearingLoop",
+      "captionsRequired",
+      "interpreterRequired",
+      "stepFree",
+      "noStrobe",
+    ] as const) {
+      if (typeof input[key] === "boolean") patch[key] = input[key];
+    }
+    if (typeof input.notes === "string") patch.notes = input.notes;
+
+    if (Object.keys(patch).length === 0) {
+      return "Nothing to fill in — no preferences were given.";
+    }
+
+    updateSignupAccess(patch as never, true);
+    setState({ signup: { ...getState().signup!, step: 2 } });
+
+    const filled = Object.keys(patch).filter((k) => k !== "notes");
+    return `Filled in the access step: ${filled.join(", ")}${patch.notes ? ", plus a note for staff" : ""}. The form now shows it for them to check. Nothing is saved until they create the account themselves — tell them to review it, since getting this wrong is worse than leaving it blank.`;
+  },
+};
+
 // --- Seats -----------------------------------------------------------------
 
 const findSeatsSchema = {
@@ -660,6 +739,7 @@ export const TOOLS: ToolDefinition<never>[] = [
   filterEventsTool,
   getEventTool,
   accessProfileTool,
+  signupAccessTool,
   findSeatsTool,
   describeSeatTool,
   venueAccessTool,

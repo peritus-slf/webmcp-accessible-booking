@@ -119,6 +119,14 @@ export default function SignInPage() {
       </form>
 
       <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">
+        No account yet?{" "}
+        <a href="/signup" className="underline">
+          Create one
+        </a>
+        .
+      </p>
+
+      <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
         No CAPTCHA, no puzzle, no image recognition. WCAG 2.2 added{" "}
         <em>Accessible Authentication</em> because those tests lock out people
         with cognitive disabilities, and they are not security.

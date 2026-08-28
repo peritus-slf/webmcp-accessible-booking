@@ -46,11 +46,33 @@ same room on a different night is a different answer.
 
 ---
 
-## Beat 3 — the boundary (25s) ← *the moment worth pausing on*
+## Beat 3 — the boundary, and the assist (40s) ← *the moment worth pausing on*
 
-> Sign me in.
+> Create me an account.
 
-**It cannot.** There is no `sign_in` tool. It should say so and hand back.
+**It cannot.** There is no tool that creates an account, for the same reason
+there is no `sign_in`. It should say so and hand back.
+
+Start the sign-up yourself at `/signup`. Fill in name, email, password. Reach
+step 2, *Access requirements*, and stop. Then:
+
+> You know what I need — fill this in for me.
+
+**Watch for** `set_signup_access_preferences`. Six boxes tick, the note lands in
+the patron's own words, and a line appears saying an assistant filled it in and
+to check it.
+
+**Voiceover:**
+
+> It could not create the account. It could fill in the form. Establishing
+> identity stays with the person; helping them complete a blank form does not.
+>
+> And this is the step everyone abandons. Nine questions about your own body,
+> at the end of a sign-up, when you only wanted a ticket. The agent already
+> knew the answers.
+
+Submit it yourself. Note the review step lists what will be saved before
+anything is.
 
 **Voiceover:**
 
@@ -58,9 +80,9 @@ same room on a different night is a different answer.
 > permission. The agent gets one and not the other, and that is a decision the
 > site made, not a limitation it ran into.
 
-Sign in by hand — the fields are pre-filled, no CAPTCHA, no puzzle. Mention that
-WCAG 2.2 added *Accessible Authentication* precisely because those tests lock
-out people with cognitive disabilities and are not security.
+No CAPTCHA, no puzzle, paste works. WCAG 2.2 added *Accessible Authentication*
+precisely because those tests lock out people with cognitive disabilities and
+are not security.
 
 ---
 

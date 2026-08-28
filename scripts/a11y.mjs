@@ -38,6 +38,7 @@ const CASES = [
   { name: "visit — food and drink", path: "/visit/food-and-drink" },
   { name: "visit — getting here", path: "/visit/getting-here" },
   { name: "sign in", path: "/signin" },
+  { name: "sign up — step 1", path: "/signup" },
   { name: "account (signed out)", path: "/account" },
   { name: "bookings (signed out)", path: "/bookings" },
   { name: "event — seating plan", path: "/events/vetrarnott" },

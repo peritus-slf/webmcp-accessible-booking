@@ -6,36 +6,58 @@ import { setState, updateProfile, type AccessProfile } from "@/lib/store";
 import { useStore } from "@/lib/useStore";
 
 /**
- * The saved access profile.
+ * Account settings.
  *
- * WCAG 2.2 3.3.7 Redundant Entry (A) says you must not ask someone for the same
- * information twice in a process. This page is that criterion taken seriously
- * and pushed one step further: the information is not re-asked across
- * *bookings* either.
+ * An ordinary settings page: your details, password, contact preferences,
+ * access requirements, delete account. Access is one section among several,
+ * which is where it belongs on a venue site — not the whole page.
  *
- * Disabled patrons report explaining the same needs at every venue, every
- * booking, often to a person on a phone line because the website could not
- * accept the information at all. Recording it once and having it applied is the
- * single largest improvement this site makes — and it is what makes the agent
- * flow short, because the agent reads this instead of interrogating you.
+ * It is still the section that does the work. WCAG 2.2 3.3.7 Redundant Entry
+ * says do not ask for the same information twice in a process; recording needs
+ * here means they are not re-asked across *bookings* either, which is the thing
+ * disabled patrons actually complain about — explaining the same needs at every
+ * venue, every time, often on a phone line because the website could not take
+ * the information at all.
  */
 
-const FIELDS: {
-  key: keyof AccessProfile;
-  label: string;
-  hint: string;
-  type: "boolean" | "number";
-}[] = [
-  { key: "wheelchairSpaces", label: "Wheelchair bays needed", hint: "A bay is a flat space, not a seat. Set 0 if you do not need one.", type: "number" },
+const ACCESS_FIELDS: { key: keyof AccessProfile; label: string; hint: string; type: "boolean" | "number" }[] = [
+  { key: "wheelchairSpaces", label: "Wheelchair bays needed", hint: "A bay is a flat space, not a seat.", type: "number" },
   { key: "companionSeat", label: "Companion seat beside the bay", hint: "One companion ticket is free with every wheelchair booking.", type: "boolean" },
-  { key: "transferSeat", label: "Transfer seat with a lifting armrest", hint: "For transferring out of a wheelchair into the seat.", type: "boolean" },
+  { key: "transferSeat", label: "Transfer seat with a lifting armrest", hint: "For transferring out of a wheelchair.", type: "boolean" },
   { key: "assistanceDog", label: "Floor room for an assistance dog", hint: "Row ends and seats beside the bays have room.", type: "boolean" },
-  { key: "hearingLoop", label: "Induction-loop coverage", hint: "The loop does not reach every seat in the house.", type: "boolean" },
-  { key: "captionsRequired", label: "Clear view of the caption unit", hint: "Only applied at captioned performances.", type: "boolean" },
-  { key: "interpreterRequired", label: "Clear view of the interpreter", hint: "Only applied at signed performances.", type: "boolean" },
+  { key: "hearingLoop", label: "Induction-loop coverage", hint: "The loop does not reach every seat.", type: "boolean" },
+  { key: "captionsRequired", label: "Clear view of the caption unit", hint: "Applied at captioned performances.", type: "boolean" },
+  { key: "interpreterRequired", label: "Clear view of the interpreter", hint: "Applied at signed performances.", type: "boolean" },
   { key: "stepFree", label: "Step-free route", hint: "No steps between the entrance and the seat.", type: "boolean" },
-  { key: "noStrobe", label: "No strobe exposure", hint: "For photosensitive epilepsy. This is never relaxed to find you a seat.", type: "boolean" },
+  { key: "noStrobe", label: "No strobe exposure", hint: "Never relaxed to find you a seat.", type: "boolean" },
 ];
+
+function Section({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      aria-labelledby={id}
+      className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    >
+      <h2 id={id} className="text-lg font-semibold">
+        {title}
+      </h2>
+      {description && (
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{description}</p>
+      )}
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
 
 export default function AccountPage() {
   const { user, accessProfile, showAccessDetail } = useStore();
@@ -44,51 +66,184 @@ export default function AccountPage() {
   if (!user) {
     return (
       <section aria-labelledby="signin-required" className="max-w-xl">
-        <h1 id="signin-required" className="text-2xl font-semibold tracking-tight">
-          My access profile
+        <h1 id="signin-required" className="text-3xl font-semibold tracking-tight">
+          My account
         </h1>
         <p className="mt-3 text-slate-600 dark:text-slate-400">
-          Sign in to see and change your saved access requirements.
+          Sign in to manage your details and preferences.
         </p>
-        <Link
-          href="/signin"
-          className="mt-4 inline-flex min-h-11 items-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:bg-white dark:text-slate-900"
-        >
-          Sign in
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link
+            href="/signin"
+            className="inline-flex min-h-11 items-center rounded-md bg-slate-900 px-5 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:bg-white dark:text-slate-900"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
+            className="inline-flex min-h-11 items-center rounded-md border border-slate-400 px-5 text-sm font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
+          >
+            Create an account
+          </Link>
+        </div>
       </section>
     );
   }
 
-  function set(key: keyof AccessProfile, value: boolean | number) {
+  function setAccess(key: keyof AccessProfile, value: boolean | number) {
     updateProfile({ [key]: value } as Partial<AccessProfile>);
-    const field = FIELDS.find((f) => f.key === key);
+    const field = ACCESS_FIELDS.find((f) => f.key === key);
     setSaved(`${field?.label ?? String(key)} updated and saved.`);
   }
 
   return (
-    <section aria-labelledby="profile-heading" className="max-w-3xl">
-      <h1 id="profile-heading" className="text-3xl font-semibold tracking-tight">
-        My access profile
-      </h1>
-      <p className="mt-3 text-slate-600 dark:text-slate-400">
-        Recorded once, applied to every booking. You should not have to explain
-        this again — not on this site, and not on the phone.
+    <div className="max-w-3xl">
+      <h1 className="text-3xl font-semibold tracking-tight">My account</h1>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">
+        Signed in as {user.email}.
       </p>
 
       <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {saved}
       </p>
 
-      <div className="mt-8 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-lg font-semibold">{user.name}</h2>
-        <p className="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
+      <div className="mt-8 space-y-6">
+        <Section id="details" title="Your details">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="acct-name" className="block text-sm font-medium">
+                Full name
+              </label>
+              <input
+                id="acct-name"
+                autoComplete="name"
+                defaultValue={user.name}
+                className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
+              />
+            </div>
+            <div>
+              <label htmlFor="acct-email" className="block text-sm font-medium">
+                Email address
+              </label>
+              <input
+                id="acct-email"
+                type="email"
+                autoComplete="email"
+                defaultValue={user.email}
+                className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="acct-phone" className="block text-sm font-medium">
+                Phone (optional)
+              </label>
+              <input
+                id="acct-phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+354"
+                className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSaved("Details saved.")}
+            className="mt-4 min-h-11 rounded-md bg-slate-900 px-5 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:bg-white dark:text-slate-900"
+          >
+            Save details
+          </button>
+        </Section>
 
-        <fieldset className="mt-6">
-          <legend className="text-sm font-medium">What you need</legend>
-          <ul className="mt-3 space-y-4">
-            {FIELDS.map((field) => {
-              const id = `profile-${String(field.key)}`;
+        <Section id="password" title="Password">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="acct-current" className="block text-sm font-medium">
+                Current password
+              </label>
+              <input
+                id="acct-current"
+                type="password"
+                autoComplete="current-password"
+                className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
+              />
+            </div>
+            <div>
+              <label htmlFor="acct-new" className="block text-sm font-medium">
+                New password
+              </label>
+              <input
+                id="acct-new"
+                type="password"
+                autoComplete="new-password"
+                aria-describedby="acct-new-hint"
+                className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
+              />
+              <p id="acct-new-hint" className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                At least eight characters.
+              </p>
+            </div>
+            <div>
+              <label htmlFor="acct-confirm" className="block text-sm font-medium">
+                Confirm new password
+              </label>
+              <input
+                id="acct-confirm"
+                type="password"
+                autoComplete="new-password"
+                className="mt-1 min-h-11 w-full rounded-md border border-slate-400 bg-white px-3 dark:border-slate-600 dark:bg-slate-800"
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSaved("Password unchanged — this is a demonstration.")}
+            className="mt-4 min-h-11 rounded-md border border-slate-400 px-5 text-sm font-medium dark:border-slate-600"
+          >
+            Change password
+          </button>
+        </Section>
+
+        <Section
+          id="contact-prefs"
+          title="Contact preferences"
+          description="How Aurora Hall gets in touch."
+        >
+          <ul className="space-y-3">
+            {[
+              ["Season announcements", "Two or three emails a year when a season goes on sale."],
+              ["Booking confirmations and reminders", "Always sent for a booking you have made."],
+              ["Occasional surveys", "About once a year."],
+            ].map(([label, hint], i) => (
+              <li key={label} className="flex items-start gap-3">
+                <input
+                  id={`pref-${i}`}
+                  type="checkbox"
+                  defaultChecked={i === 1}
+                  aria-describedby={`pref-${i}-hint`}
+                  className="mt-1 size-5"
+                />
+                <span>
+                  <label htmlFor={`pref-${i}`} className="font-medium">
+                    {label}
+                  </label>
+                  <span id={`pref-${i}-hint`} className="block text-sm text-slate-600 dark:text-slate-400">
+                    {hint}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section
+          id="access-reqs"
+          title="Access requirements"
+          description="Recorded once and applied to every booking, so you are not asked again — and so staff have it before you arrive."
+        >
+          <ul className="space-y-4">
+            {ACCESS_FIELDS.map((field) => {
+              const id = `acct-${String(field.key)}`;
               const value = accessProfile[field.key];
               return (
                 <li key={String(field.key)}>
@@ -99,7 +254,7 @@ export default function AccountPage() {
                         type="checkbox"
                         checked={value === true}
                         aria-describedby={`${id}-hint`}
-                        onChange={(e) => set(field.key, e.target.checked)}
+                        onChange={(e) => setAccess(field.key, e.target.checked)}
                         className="mt-1 size-5"
                       />
                       <span>
@@ -123,7 +278,7 @@ export default function AccountPage() {
                         max={4}
                         value={Number(value)}
                         aria-describedby={`${id}-hint`}
-                        onChange={(e) => set(field.key, Number(e.target.value))}
+                        onChange={(e) => setAccess(field.key, Number(e.target.value))}
                         className="mt-1 block min-h-11 w-24 rounded-md border border-slate-400 px-3 dark:border-slate-600 dark:bg-slate-800"
                       />
                       <span id={`${id}-hint`} className="mt-1 block text-sm text-slate-600 dark:text-slate-400">
@@ -135,55 +290,59 @@ export default function AccountPage() {
               );
             })}
           </ul>
-        </fieldset>
 
-        <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
-          <h3 className="text-sm font-medium">Showing access detail</h3>
-          <div className="mt-3 flex items-start gap-3">
+          <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <label htmlFor="acct-notes" className="block text-sm font-medium">
+              Anything else staff should know
+            </label>
+            <textarea
+              id="acct-notes"
+              rows={3}
+              value={accessProfile.notes}
+              onChange={(e) => updateProfile({ notes: e.target.value })}
+              aria-describedby="acct-notes-hint"
+              className="mt-1 w-full rounded-md border border-slate-400 bg-white p-3 text-sm dark:border-slate-600 dark:bg-slate-800"
+            />
+            <p id="acct-notes-hint" className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+              Sent to door staff with each booking. An assistant can read this; it
+              cannot rewrite it.
+            </p>
+          </div>
+
+          <div className="mt-5 flex items-start gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
             <input
               id="show-access-detail"
               type="checkbox"
               checked={showAccessDetail}
               onChange={(e) => {
                 setState({ showAccessDetail: e.target.checked });
-                setSaved(
-                  e.target.checked
-                    ? "Access detail will now be shown on every page."
-                    : "Access detail is collapsed again.",
-                );
+                setSaved(e.target.checked ? "Access detail shown on every page." : "Access detail collapsed again.");
               }}
+              aria-describedby="show-access-detail-hint"
               className="mt-1 size-5"
             />
             <span>
               <label htmlFor="show-access-detail" className="font-medium">
                 Always show access detail
               </label>
-              <span className="block text-sm text-slate-600 dark:text-slate-400">
-                Performances and visitor-information pages keep their access
-                detail collapsed by default. This opens it everywhere. You can
-                also open any single panel by clicking it, or ask an agent to
-                turn this on for you.
+              <span id="show-access-detail-hint" className="block text-sm text-slate-600 dark:text-slate-400">
+                Performances and visitor pages keep their access detail
+                collapsed. This opens it everywhere.
               </span>
             </span>
           </div>
-        </div>
+        </Section>
 
-        <div className="mt-6 border-t border-slate-200 pt-5 dark:border-slate-800">
-          <h3 className="text-sm font-medium">Your note to staff</h3>
-          <p className="mt-2 rounded-md bg-slate-100 p-3 text-sm italic dark:bg-slate-800">
-            &ldquo;{accessProfile.notes}&rdquo;
-          </p>
-          <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
-            Read by the access team, and sent to the door staff with your
-            booking. An agent can read this; it cannot rewrite it.
-          </p>
-        </div>
+        <Section id="close-account" title="Close account" description="This cannot be undone.">
+          <button
+            type="button"
+            onClick={() => setSaved("Nothing deleted — this is a demonstration.")}
+            className="min-h-11 rounded-md border border-red-700 px-5 text-sm font-medium text-red-800 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            Close my account
+          </button>
+        </Section>
       </div>
-
-      <p className="mt-6 text-sm text-slate-600 dark:text-slate-400">
-        Changes save as you make them — there is no submit button to hunt for and
-        nothing is lost if you navigate away.
-      </p>
-    </section>
+    </div>
   );
 }

@@ -62,8 +62,27 @@ export const NO_FILTERS: EventFilters = {
   noStrobe: false,
 };
 
+/**
+ * An in-progress sign-up.
+ *
+ * Identity fields are filled by the person. The access step can be populated by
+ * an agent through `set_signup_access_preferences` — it fills a blank form the
+ * user is looking at and is about to submit, which is assistance. It never
+ * writes a saved profile, and there is still no tool that creates the account.
+ */
+export interface SignupDraft {
+  step: 1 | 2 | 3;
+  name: string;
+  email: string;
+  password: string;
+  access: AccessProfile;
+  /** True once an agent has populated the access step, so the UI can say so. */
+  accessPrefilled: boolean;
+}
+
 export interface AppState {
   user: DemoUser | null;
+  signup: SignupDraft | null;
   eventFilters: EventFilters;
   /**
    * Whether access detail panels start open. A display preference for MORE
@@ -121,6 +140,7 @@ const EMPTY_PROFILE: AccessProfile = {
 
 let state: AppState = {
   user: null,
+  signup: null,
   eventFilters: NO_FILTERS,
   showAccessDetail: false,
   accessProfile: EMPTY_PROFILE,
@@ -170,6 +190,7 @@ export function restoreSession(): void {
     const saved = JSON.parse(raw) as Partial<AppState>;
     state = {
       user: saved.user ?? null,
+      signup: saved.signup ?? null,
       eventFilters: { ...NO_FILTERS, ...(saved.eventFilters ?? {}) },
       showAccessDetail: saved.showAccessDetail ?? false,
       accessProfile: { ...EMPTY_PROFILE, ...(saved.accessProfile ?? {}) },
@@ -228,9 +249,61 @@ export function updateProfile(patch: Partial<AccessProfile>): void {
 }
 
 export function resetDemo(): void {
-  state = { user: null, eventFilters: NO_FILTERS, showAccessDetail: false, accessProfile: EMPTY_PROFILE, holds: null, bookings: [] };
+  state = { user: null, signup: null, eventFilters: NO_FILTERS, showAccessDetail: false, accessProfile: EMPTY_PROFILE, holds: null, bookings: [] };
   persist();
   for (const listener of listeners) listener();
+}
+
+
+export const EMPTY_ACCESS: AccessProfile = EMPTY_PROFILE;
+
+/** Begin a sign-up, or return the one in progress. */
+export function startSignup(): SignupDraft {
+  if (state.signup) return state.signup;
+  const draft: SignupDraft = {
+    step: 1,
+    name: "",
+    email: "",
+    password: "",
+    access: EMPTY_PROFILE,
+    accessPrefilled: false,
+  };
+  setState({ signup: draft });
+  return draft;
+}
+
+export function updateSignup(patch: Partial<SignupDraft>): void {
+  if (!state.signup) return;
+  setState({ signup: { ...state.signup, ...patch } });
+}
+
+export function updateSignupAccess(patch: Partial<AccessProfile>, byAgent = false): void {
+  if (!state.signup) return;
+  setState({
+    signup: {
+      ...state.signup,
+      access: { ...state.signup.access, ...patch },
+      accessPrefilled: byAgent || state.signup.accessPrefilled,
+    },
+  });
+}
+
+/**
+ * Finish a sign-up. Called from the form's submit handler only — creating an
+ * account is not exposed as a tool, for the same reason signing in is not.
+ */
+export function completeSignup(): void {
+  const draft = state.signup;
+  if (!draft) return;
+  setState({
+    user: { name: draft.name.trim() || "New patron", email: draft.email.trim() },
+    accessProfile: draft.access,
+    signup: null,
+  });
+}
+
+export function cancelSignup(): void {
+  setState({ signup: null });
 }
 
 /** Booking references are derived from the booking, not random, so SSR matches. */

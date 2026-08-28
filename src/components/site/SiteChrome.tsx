@@ -130,12 +130,20 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             ) : (
-              <Link
-                href="/signin"
-                className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
-              >
-                Sign in
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/signin"
+                  className="inline-flex min-h-11 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="hidden min-h-11 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 sm:inline-flex dark:border-slate-600 dark:hover:bg-slate-800"
+                >
+                  Create account
+                </Link>
+              </div>
             )}
           </div>
         </div>

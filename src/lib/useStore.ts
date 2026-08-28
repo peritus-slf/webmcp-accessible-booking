@@ -5,6 +5,7 @@ import { getState, subscribe, type AppState } from "./store";
 
 const SERVER_SNAPSHOT: AppState = {
   user: null,
+  signup: null,
   eventFilters: {
     relaxed: false,
     captioned: false,

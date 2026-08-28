@@ -25,6 +25,10 @@ dialog::backdrop {
 /*
   Respect a stated preference for reduced motion. Transitions on 330 seat
   cells are exactly the kind of thing that triggers vestibular symptoms.
+
+  Nothing on this site animates by default, so this is a backstop rather than
+  the mechanism. The safe state is the default state — a preference someone has
+  to find first is unsafe for everyone who does not find it.
 */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -34,5 +38,73 @@ dialog::backdrop {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/*
+  Forced colours — Windows High Contrast Mode and equivalents.
+
+  The operating system replaces every colour we set. A seating plan that
+  encodes availability in background colour therefore loses all of it, which is
+  why each seat also carries a glyph and a full text label. What still needs
+  help here is structure: borders must survive so the cells remain discrete,
+  and the focus ring must be drawn in a system colour rather than ours.
+
+  This is the right shape for adapting to a user: they set it once, at the OS
+  level, and every site honours it. A bespoke per-site "high contrast mode"
+  would be a worse version of a preference the platform already carries.
+*/
+@media (forced-colors: active) {
+  /* Keep every seat cell visibly bounded once our backgrounds are discarded. */
+  [data-seat] {
+    border: 1px solid ButtonBorder;
+    forced-color-adjust: none;
+    background-color: ButtonFace;
+    color: ButtonText;
+  }
+
+  /* Selected and booked seats must stay distinguishable without our palette. */
+  [data-seat][aria-pressed="true"] {
+    background-color: Highlight;
+    color: HighlightText;
+    border-color: HighlightText;
+  }
+
+  [data-seat]:disabled {
+    background-color: ButtonFace;
+    color: GrayText;
+    border-color: GrayText;
+  }
+
+  /* Our outline colour is dropped in forced colours; ask for a system one. */
+  :focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  /* Access badges rely on tinted backgrounds; give them a border to survive. */
+  [class*="rounded-md"][class*="border"] {
+    border-width: 1px;
+  }
+
+  dialog {
+    border: 1px solid CanvasText;
+  }
+}
+
+/*
+  A stated preference for more contrast. Our palette already meets AA, but
+  hairline borders are the first thing to disappear for a low-vision reader.
+*/
+@media (prefers-contrast: more) {
+  [data-seat],
+  input,
+  select,
+  textarea {
+    border-width: 2px;
+  }
+
+  :focus-visible {
+    outline-width: 3px;
   }
 }

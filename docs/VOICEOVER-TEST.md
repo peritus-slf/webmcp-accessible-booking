@@ -180,6 +180,8 @@ The end-to-end test. Mouse untouched from start to finish.
 | Keyboard only, no VO | `Tab` the whole journey. Focus is always **visible** and never trapped. | |
 | Focus not obscured (2.4.11) | Tab down a long page. Focused element never hides behind a header. | |
 | Reduced motion | System Settings → Accessibility → Display → Reduce motion. Transitions stop. | |
+| Increased contrast | System Settings → Accessibility → Display → Increase contrast. Borders thicken; nothing becomes unreadable. | |
+| Forced colours | Windows High Contrast Mode, or Chrome DevTools → Rendering → "Emulate CSS forced-colors: active". **Seat states must stay distinguishable** — the glyph and the border carry it once our palette is discarded. | |
 | Dark mode | Toggle appearance. Contrast holds in both. | |
 | Windows / NVDA | If available. NVDA has the largest share globally and behaves differently around grids — `Insert + Space` toggles focus mode. | |
 

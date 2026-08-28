@@ -17,7 +17,7 @@
  * they waste anyone's manual testing time.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import puppeteer from "puppeteer";
 
@@ -100,18 +100,53 @@ async function audit(page, testCase) {
   );
 }
 
+
+/**
+ * Launch a browser, preferring one already on the machine.
+ *
+ * Puppeteer will happily download its own Chromium, but a 150 MB fetch is a
+ * poor thing to inflict on someone who cloned this repo to check whether the
+ * accessibility claims hold. Try the known install locations, then the
+ * `chrome` channel, and only then fall back to a bundled build — reporting
+ * clearly if none of them work, rather than failing with a stack trace about
+ * a version number nobody asked for.
+ */
+async function launchBrowser() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+  ].filter(Boolean);
+
+  for (const executablePath of candidates) {
+    if (!existsSync(executablePath)) continue;
+    try {
+      return await puppeteer.launch({ headless: true, executablePath });
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  for (const options of [{ channel: "chrome" }, {}]) {
+    try {
+      return await puppeteer.launch({ headless: true, ...options });
+    } catch {
+      // Try the next strategy.
+    }
+  }
+
+  throw new Error(
+    "No Chrome found. Install Chrome, set CHROME_PATH to its binary, or run:\n" +
+      "  npx puppeteer browsers install chrome",
+  );
+}
+
 const IMPACT_ORDER = { critical: 0, serious: 1, moderate: 2, minor: 3 };
 
 async function main() {
-  // Prefer the Chrome already installed on the machine. Puppeteer can
-  // download its own build, but a 150 MB fetch is a poor thing to inflict on
-  // anyone who clones this to check the accessibility claims.
-  let browser;
-  try {
-    browser = await puppeteer.launch({ headless: true, channel: "chrome" });
-  } catch {
-    browser = await puppeteer.launch({ headless: true });
-  }
+  const browser = await launchBrowser();
   const page = await browser.newPage();
   // A viewport wide enough that the responsive nav is not collapsed, so the
   // audit covers the same DOM a desktop judge will see.

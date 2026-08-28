@@ -198,6 +198,43 @@ So the consequential tools now:
 
 `release_held_seats` takes seat identifiers for the same reason.
 
+## What testing actually caught
+
+Four defects, none of them found by reading the code.
+
+**A hydration mismatch.** `toLocaleString("is-IS")` resolves against whichever
+ICU data the runtime ships, so Node and the browser disagreed on the thousands
+separator. On most sites that is a console warning. Here those numbers land in
+`aria-label`s and an `aria-live` region, so a screen reader could have announced
+a price the server never rendered.
+
+**A wheelchair search that under-reported.** `findSeats` truncated results with
+`slice(0, wanted)`, conflating how many bays a party needs with how many options
+to offer. Someone wanting one bay was shown one option when two qualified. Found
+by ChatGPT, whose answer was more correct than our own test's.
+
+**A booking tool that bought the wrong seats.** `complete_booking` took no seat
+argument and bought everything on hold. Testing in ChatGPT's browser, the agent
+held two viable pairs, was asked to book one, called the only tool available —
+correctly — and spent 32.000 kr instead of 20.500. The agent did nothing wrong;
+the contract was vague about an action that charges money. Exposing capability
+to agents raises the cost of a vague tool, it does not lower it.
+
+**A contrast failure, on an accessibility submission.** While making the footer
+look more commercial, a caption went to `text-slate-400` on white. Nine pages
+failed AA. `npm run a11y` caught it — and then it was committed anyway, because
+the check was being piped into `tail`, and a shell pipeline reports the exit
+status of the *last* command. The gate had never actually been firing.
+
+That last one is the most useful thing in this repository. A contrast regression
+was introduced into an accessibility project, by the people arguing for
+accessibility, while making the page look better — which is exactly the trade
+real venues make without noticing. Care did not catch it. A tool did, and only
+once the tool was wired up so it could fail properly.
+
+If you take one thing from this repo, take that: run the check, and check that
+the check can fail.
+
 ## Running it
 
 ```bash

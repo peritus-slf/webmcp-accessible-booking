@@ -108,6 +108,27 @@ and **says which seats are still held and not charged.**
 
 ---
 
+## Beat 5b — the one we broke ourselves (20s) *optional, and the most honest 20s available*
+
+Show `npm run a11y` running green. Then:
+
+**Voiceover:**
+
+> While making this footer look more like a real venue, we put grey text on
+> white and failed contrast on nine pages. This check caught it — and then we
+> committed it anyway, because the command was piped into `tail` and a shell
+> pipeline reports the last command's exit status. The gate had never been
+> firing.
+>
+> A contrast regression, introduced into an accessibility project, by the people
+> arguing for accessibility, while making the page look better. That is the
+> trade every venue makes without noticing. Care did not catch it. A tool did,
+> once the tool could actually fail.
+
+Use this if the run comes in under time. It costs twenty seconds and it is the
+only moment in the video where the entry admits something, which is worth more
+than another feature.
+
 ## Beat 6 — parity (25s)
 
 Close ChatGPT. On the site, press **⌘K**.

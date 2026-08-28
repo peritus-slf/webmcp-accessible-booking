@@ -79,6 +79,8 @@ export interface VenueAccessInfo {
   captionUnitPosition: string;
   signInterpreterPosition: string;
   strobeWarning: string;
+  /** How to reach the access team, for anyone who would rather ask a person. */
+  accessLine: string;
 }
 
 export interface SeatQuery {

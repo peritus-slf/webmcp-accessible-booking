@@ -77,7 +77,34 @@ export default function AccessPage() {
         })}
       </div>
 
-      <section aria-labelledby="no-phone" className="mt-10 rounded-lg border border-emerald-700 bg-emerald-50 p-5 dark:bg-emerald-950">
+      <section aria-labelledby="contact-access" className="mt-10 rounded-lg border border-slate-300 p-5 dark:border-slate-700">
+        <h2 id="contact-access" className="text-lg font-semibold">
+          Talk to the access team
+        </h2>
+        <p className="mt-2 text-sm">
+          The access line is open 10:00&ndash;18:00 on{" "}
+          <a
+            href="tel:+3545550100"
+            className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+          >
+            +354 555 0100
+          </a>
+          , or email{" "}
+          <a
+            href="mailto:access@example.is"
+            className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+          >
+            access@example.is
+          </a>
+          .
+        </p>
+        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+          We will also come back to you in writing if you would rather not use
+          the phone. Nothing on this page requires a call.
+        </p>
+      </section>
+
+      <section aria-labelledby="no-phone" className="mt-6 rounded-lg border border-emerald-700 bg-emerald-50 p-5 dark:bg-emerald-950">
         <h2 id="no-phone" className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
           You never have to phone
         </h2>

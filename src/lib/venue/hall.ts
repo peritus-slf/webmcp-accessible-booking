@@ -205,6 +205,8 @@ export const VENUE_ACCESS: VenueAccessInfo = {
     "Caption unit is rigged downstage right. It is not visible from stalls seats 18 and above, from the circle beyond seat 12, or from the balcony.",
   signInterpreterPosition:
     "Interpreter stands downstage left for signed performances. The sightline is lost from stalls and circle seats 1 to 3, and from the balcony.",
+  accessLine:
+    "Access line +354 555 0100, open 10:00-18:00, or access@example.is. They will reply in writing if you would rather not use the phone. Nothing at this venue requires a call — wheelchair bays, companion tickets and transfer seats are all bookable online on the same terms as any other seat.",
   strobeWarning:
     "Strobe use varies by performance — see the individual event for its lighting profile and the rows it affects.",
 };

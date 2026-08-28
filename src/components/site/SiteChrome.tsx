@@ -7,6 +7,7 @@ import { CommandInterface } from "@/components/CommandInterface";
 import { useStore } from "@/lib/useStore";
 import { restoreSession, signOut } from "@/lib/store";
 import { registerAllTools } from "@/lib/tools/webmcp";
+import { SiteFooter } from "./SiteFooter";
 
 /**
  * Site chrome: skip links, banner, primary navigation, footer.
@@ -16,8 +17,9 @@ import { registerAllTools } from "@/lib/tools/webmcp";
  *
  *  - 2.4.1 Bypass Blocks — skip links, first in the tab order.
  *  - 3.2.3 Consistent Navigation — the same nav, same order, every page.
- *  - 3.2.6 Consistent Help (2.2, A) — the access-line contact sits in the same
- *    place in the footer of every page.
+ *  - 3.2.6 Consistent Help (2.2, A) — the Accessibility link sits in the same
+ *    place in the footer of every page. The criterion asks for consistency,
+ *    not prominence.
  *  - 2.4.11 Focus Not Obscured (2.2, AA) — the header does not stick, so a
  *    focused element can never be hidden behind it. A sticky header is the
  *    single most common way sites fail this.
@@ -71,11 +73,6 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
           <li>
             <a href="#site-nav" className="inline-block rounded px-3 py-2 underline">
               Skip to navigation
-            </a>
-          </li>
-          <li>
-            <a href="#access-help" className="inline-block rounded px-3 py-2 underline">
-              Skip to access help
             </a>
           </li>
         </ul>
@@ -148,56 +145,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="mt-12 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-          {/* 3.2.6 Consistent Help — same place, every page. */}
-          <section id="access-help" aria-labelledby="access-help-heading">
-            <h2 id="access-help-heading" className="text-sm font-semibold">
-              Access
-            </h2>
-            <p className="mt-2 text-sm">
-              <Link
-                href="/access"
-                className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-              >
-                Access at Aurora Hall
-              </Link>{" "}
-              — step-free routes, induction loop, captions, quiet room,
-              assistance dogs, companion tickets.
-            </p>
-            <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-slate-400">
-              The access line is open 10:00–18:00 on{" "}
-              <a
-                href="tel:+3545550100"
-                className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-              >
-                +354 555 0100
-              </a>
-              , or email{" "}
-              <a
-                href="mailto:access@example.is"
-                className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-              >
-                access@example.is
-              </a>
-              . You never have to phone to book accessible seating here — everything
-              on the access line is also on this site.
-            </p>
-          </section>
-
-          <p className="mt-6 border-t border-slate-200 pt-6 text-xs text-slate-500 dark:border-slate-800">
-            Aurora Hall is a fictional venue built as a WebMCP demonstration. No
-            real tickets, no real money, no real account.{" "}
-            <a
-              href="https://github.com/peritus-slf/saeti"
-              className="rounded underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
-            >
-              Source on GitHub
-            </a>
-            .
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

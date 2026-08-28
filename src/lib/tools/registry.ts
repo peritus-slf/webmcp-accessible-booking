@@ -90,6 +90,7 @@ const accessCapabilitiesTool: ToolDefinition = {
       "3. SEAT-LEVEL FILTERING — find_seats searches on access requirements directly and returns groups that sit together. It states any requirement it could not meet rather than quietly returning an unsuitable seat.",
       "4. FREE COMPANION TICKET — one companion ticket is free with every wheelchair booking. It is applied at complete_booking automatically; nobody has to ask for it.",
       "5. VENUE FACILITIES — step-free entrances, accessible toilets, loop coverage, quiet room and assistance-dog policy, via get_venue_access_info.",
+      "6. A HUMAN, if wanted — access line +354 555 0100, 10:00-18:00, or access@example.is, who reply in writing on request. Offer this alongside the site, never instead of it: everything above is bookable online without a call.",
       "",
       user
         ? `${user.name} is signed in and has a saved access profile. Read it before searching, and offer to apply it rather than asking them to restate their needs.`
@@ -402,6 +403,7 @@ const venueAccessTool: ToolDefinition = {
       v.quietRoom ? `Quiet room: ${v.quietRoom}.` : "No quiet room.",
       `Assistance dogs: ${v.assistanceDogPolicy}`,
       `Companion tickets: ${v.companionTicketPolicy}`,
+      `Contact: ${v.accessLine}`,
     ].join("\n");
   },
 };

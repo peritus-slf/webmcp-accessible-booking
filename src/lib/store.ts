@@ -80,6 +80,7 @@ export const DEMO_PROFILE: AccessProfile = {
     "I use a powerchair and my partner comes with me. I lip-read as well as using the loop, so a clear view of the stage matters. Photosensitive epilepsy — no strobe, no exceptions.",
 };
 
+
 const EMPTY_PROFILE: AccessProfile = {
   wheelchairSpaces: 0,
   companionSeat: false,
@@ -103,6 +104,61 @@ let state: AppState = {
 
 const listeners = new Set<() => void>();
 
+/**
+ * Session persistence.
+ *
+ * Module state alone survives client-side navigation but not a full page load,
+ * and an agent moving someone through the site navigates by URL. Without this,
+ * being signed in and holding seats would silently evaporate between the
+ * landing page and the seat map — the exact journey the agent flow depends on.
+ *
+ * `sessionStorage`, not `localStorage`: a booking in progress belongs to this
+ * tab and this visit. It should not still be sitting there tomorrow, and it
+ * should not leak between tabs.
+ */
+const STORAGE_KEY = "aurora-hall:session";
+
+function persist(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Private browsing, a full quota, or storage disabled entirely. The site
+    // keeps working with in-memory state; it just forgets across navigations.
+  }
+}
+
+/**
+ * Restore a persisted session.
+ *
+ * Called from an effect after mount, never during render. Hydrating at module
+ * load would make the first client render disagree with the server-rendered
+ * HTML, and this codebase has already been bitten once by a mismatch that also
+ * changed what a screen reader announced.
+ */
+export function restoreSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw) as Partial<AppState>;
+    state = {
+      user: saved.user ?? null,
+      accessProfile: { ...EMPTY_PROFILE, ...(saved.accessProfile ?? {}) },
+      holds: saved.holds ?? null,
+      bookings: Array.isArray(saved.bookings) ? saved.bookings : [],
+    };
+    for (const listener of listeners) listener();
+  } catch {
+    // A malformed or stale payload is discarded rather than crashing the page.
+    try {
+      window.sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* nothing further to do */
+    }
+  }
+}
+
 export function subscribe(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -114,6 +170,7 @@ export function getState(): AppState {
 
 export function setState(next: Partial<AppState>): void {
   state = { ...state, ...next };
+  persist();
   for (const listener of listeners) listener();
 }
 
@@ -138,6 +195,7 @@ export function updateProfile(patch: Partial<AccessProfile>): void {
 
 export function resetDemo(): void {
   state = { user: null, accessProfile: EMPTY_PROFILE, holds: null, bookings: [] };
+  persist();
   for (const listener of listeners) listener();
 }
 

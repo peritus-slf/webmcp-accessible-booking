@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { CommandInterface } from "@/components/CommandInterface";
 import { useStore } from "@/lib/useStore";
-import { signOut } from "@/lib/store";
+import { restoreSession, signOut } from "@/lib/store";
 import { registerAllTools } from "@/lib/tools/webmcp";
 
 /**
@@ -37,6 +37,9 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   // Tools are registered once for the whole site, so an agent can act on any
   // page rather than only on the seat map.
   useEffect(() => {
+    // Restore first: an agent that navigates here must not read a signed-out
+    // access profile for a patron who is signed in.
+    restoreSession();
     let dispose: (() => void) | undefined;
     registerAllTools().then((fn) => {
       dispose = fn;

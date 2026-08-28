@@ -40,7 +40,7 @@ export function Hero({ featured }: { featured: VenueEvent }) {
           contrast constant no matter where the animation happens to be.
         */}
         <div
-          className="aurora-ribbons absolute -inset-[10%] opacity-60 [mask-image:radial-gradient(ellipse_at_20%_0%,black_15%,transparent_70%)]"
+          className="aurora-ribbons absolute -inset-[10%] opacity-80 [mask-image:radial-gradient(ellipse_at_78%_-10%,black_20%,transparent_78%)]"
         />
 
         {/* Slow blobs underneath, for depth the bands alone do not give. */}
@@ -64,8 +64,17 @@ export function Hero({ featured }: { featured: VenueEvent }) {
           }}
         />
 
-        {/* Grounds the text against the brightest part of the drift. */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,0.94),rgba(2,6,23,0.1))]" />
+        {/*
+          Two scrims. The first is a general floor; the second sits only over
+          the left column where the text lives.
+
+          Text contrast cannot depend on where a 60-second animation happens to
+          be when someone loads the page. Automated checkers report "incomplete"
+          rather than "fail" against animated gradients, so this is guaranteed
+          structurally instead of measured once and hoped for.
+        */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(2,6,23,0.88),rgba(2,6,23,0.15))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(2,6,23,0.92)_0%,rgba(2,6,23,0.72)_38%,transparent_72%)]" />
       </div>
 
       <div className="mx-auto max-w-6xl px-0 sm:px-2">

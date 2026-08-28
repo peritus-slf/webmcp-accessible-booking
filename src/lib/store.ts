@@ -45,8 +45,26 @@ export interface Holds {
   seatIds: string[];
 }
 
+/** Which performances the season listing is showing. A filter, not a mode. */
+export interface EventFilters {
+  relaxed: boolean;
+  captioned: boolean;
+  signed: boolean;
+  audioDescribed: boolean;
+  noStrobe: boolean;
+}
+
+export const NO_FILTERS: EventFilters = {
+  relaxed: false,
+  captioned: false,
+  signed: false,
+  audioDescribed: false,
+  noStrobe: false,
+};
+
 export interface AppState {
   user: DemoUser | null;
+  eventFilters: EventFilters;
   accessProfile: AccessProfile;
   holds: Holds | null;
   bookings: Booking[];
@@ -97,6 +115,7 @@ const EMPTY_PROFILE: AccessProfile = {
 
 let state: AppState = {
   user: null,
+  eventFilters: NO_FILTERS,
   accessProfile: EMPTY_PROFILE,
   holds: null,
   bookings: [],
@@ -144,6 +163,7 @@ export function restoreSession(): void {
     const saved = JSON.parse(raw) as Partial<AppState>;
     state = {
       user: saved.user ?? null,
+      eventFilters: { ...NO_FILTERS, ...(saved.eventFilters ?? {}) },
       accessProfile: { ...EMPTY_PROFILE, ...(saved.accessProfile ?? {}) },
       holds: saved.holds ?? null,
       bookings: Array.isArray(saved.bookings) ? saved.bookings : [],
@@ -186,7 +206,7 @@ export function signIn(): void {
 }
 
 export function signOut(): void {
-  setState({ user: null, accessProfile: EMPTY_PROFILE, holds: null });
+  setState({ user: null, accessProfile: EMPTY_PROFILE, holds: null, eventFilters: NO_FILTERS });
 }
 
 export function updateProfile(patch: Partial<AccessProfile>): void {
@@ -194,7 +214,7 @@ export function updateProfile(patch: Partial<AccessProfile>): void {
 }
 
 export function resetDemo(): void {
-  state = { user: null, accessProfile: EMPTY_PROFILE, holds: null, bookings: [] };
+  state = { user: null, eventFilters: NO_FILTERS, accessProfile: EMPTY_PROFILE, holds: null, bookings: [] };
   persist();
   for (const listener of listeners) listener();
 }

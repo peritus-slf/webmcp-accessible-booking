@@ -3,7 +3,7 @@ import { EVENTS, accessSummary, eventBySlug, type VenueEvent } from "@/lib/venue
 import { describeSeat, findSeats, seatsForEvent } from "@/lib/venue/query";
 import type { SeatQuery, StrobeExposure } from "@/lib/venue/types";
 import { isk } from "@/lib/format";
-import { bookingReference, getState, setState } from "@/lib/store";
+import { NO_FILTERS, bookingReference, getState, setState, type EventFilters } from "@/lib/store";
 
 /**
  * The tool contract for Aurora Hall.
@@ -134,6 +134,83 @@ const listEventsTool: ToolDefinition<{ relaxedOnly?: boolean; captionedOnly?: bo
         return `${e.title} (${e.slug}) — ${e.subtitle}. ${e.date}, curtain ${e.curtain}. ${e.category}. ${strobe}${tags.length ? `, ${tags.join(", ")}` : ""}.${e.soldOut ? " SOLD OUT." : ""}`;
       })
       .join("\n");
+  },
+};
+
+/**
+ * Set the season listing's filters.
+ *
+ * This is the same control a person clicks in the filter row on the landing
+ * page, driven by a tool instead of a pointer. It is a filter, not a mode: it
+ * changes which performances are listed and reveals their access detail on the
+ * cards, and it changes nothing about what can be booked. Every performance
+ * remains bookable and the full access detail is on each event page either way.
+ *
+ * The intended use is to read someone's saved profile and offer to apply it —
+ * "your profile says no strobe and captions; shall I filter the season to
+ * match?" — rather than making them read six cards to find the two that work.
+ */
+const filterEventsTool: ToolDefinition<Partial<EventFilters> & { useMyAccessProfile?: boolean }> = {
+  name: "filter_events",
+  description:
+    "Filter the season listing on the landing page by access provision, and reveal each performance's access detail on its card. This is the same filter a person can set by hand; it changes what is shown, never what can be booked. Pass useMyAccessProfile:true to derive the filters from the signed-in patron's saved requirements. Pass all filters false to clear.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      useMyAccessProfile: {
+        type: "boolean",
+        description: "Derive the filters from the signed-in patron's saved access profile. Prefer this over guessing.",
+      },
+      relaxed: { type: "boolean", description: "Only relaxed performances." },
+      captioned: { type: "boolean", description: "Only captioned performances." },
+      signed: { type: "boolean", description: "Only sign-language interpreted performances." },
+      audioDescribed: { type: "boolean", description: "Only audio-described performances." },
+      noStrobe: { type: "boolean", description: "Only performances with no strobe. Use for photosensitive epilepsy." },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: false },
+  async execute(input = {}) {
+    const state = getState();
+    let filters: EventFilters = { ...NO_FILTERS };
+
+    if (input.useMyAccessProfile) {
+      if (!state.user) return NOT_SIGNED_IN;
+      const p = state.accessProfile;
+      filters = {
+        relaxed: false,
+        captioned: p.captionsRequired,
+        signed: p.interpreterRequired,
+        audioDescribed: false,
+        noStrobe: p.noStrobe,
+      };
+    }
+
+    for (const key of ["relaxed", "captioned", "signed", "audioDescribed", "noStrobe"] as const) {
+      if (typeof input[key] === "boolean") filters[key] = input[key];
+    }
+
+    setState({ eventFilters: filters });
+
+    const active = Object.entries(filters)
+      .filter(([, on]) => on)
+      .map(([k]) => k);
+    const shown = EVENTS.filter(
+      (e) =>
+        (!filters.relaxed || e.relaxed) &&
+        (!filters.captioned || e.captioned) &&
+        (!filters.signed || e.signed) &&
+        (!filters.audioDescribed || e.audioDescribed) &&
+        (!filters.noStrobe || e.lighting === "none"),
+    );
+
+    if (active.length === 0) {
+      return `Filters cleared. All ${EVENTS.length} performances are listed.`;
+    }
+    if (shown.length === 0) {
+      return `No performance this season matches ${active.join(" + ")}. The filter is set and the listing is empty; clear it by calling filter_events with everything false.`;
+    }
+    return `Filtered the season to ${active.join(" + ")}. ${shown.length} of ${EVENTS.length} performances shown: ${shown.map((e) => `${e.title} (${e.slug})`).join(", ")}. Their access detail is now visible on the cards.`;
   },
 };
 
@@ -492,6 +569,7 @@ const myBookingsTool: ToolDefinition = {
 export const TOOLS: ToolDefinition<never>[] = [
   accessCapabilitiesTool,
   listEventsTool,
+  filterEventsTool,
   getEventTool,
   accessProfileTool,
   findSeatsTool,

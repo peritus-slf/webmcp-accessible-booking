@@ -5,6 +5,13 @@ import { getState, subscribe, type AppState } from "./store";
 
 const SERVER_SNAPSHOT: AppState = {
   user: null,
+  eventFilters: {
+    relaxed: false,
+    captioned: false,
+    signed: false,
+    audioDescribed: false,
+    noStrobe: false,
+  },
   accessProfile: {
     wheelchairSpaces: 0,
     companionSeat: false,

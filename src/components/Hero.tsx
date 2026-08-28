@@ -34,11 +34,20 @@ export function Hero({ featured }: { featured: VenueEvent }) {
         just slower keyframes.
       */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-slate-950">
+        {/*
+          Ribbons first — bands of light scrolling across each other. Masked so
+          they are brightest top-left and fall away before the text, which keeps
+          contrast constant no matter where the animation happens to be.
+        */}
+        <div
+          className="aurora-ribbons absolute -inset-[10%] opacity-60 [mask-image:radial-gradient(ellipse_at_20%_0%,black_15%,transparent_70%)]"
+        />
+
+        {/* Slow blobs underneath, for depth the bands alone do not give. */}
         <div className="absolute inset-0 [mix-blend-mode:screen]">
-          <div className="aurora-a absolute -left-1/4 top-[-35%] h-[150%] w-[95%] rounded-full bg-[radial-gradient(closest-side,rgba(56,189,248,0.62),transparent)] blur-[90px]" />
-          <div className="aurora-b absolute -right-1/4 bottom-[-45%] h-[150%] w-[95%] rounded-full bg-[radial-gradient(closest-side,rgba(167,139,250,0.58),transparent)] blur-[90px]" />
-          <div className="aurora-a absolute left-1/4 top-[-25%] h-[130%] w-[65%] rounded-full bg-[radial-gradient(closest-side,rgba(45,212,191,0.4),transparent)] blur-[100px] [animation-delay:-14s]" />
-          <div className="aurora-b absolute right-1/3 top-[10%] h-[110%] w-[55%] rounded-full bg-[radial-gradient(closest-side,rgba(232,121,249,0.28),transparent)] blur-[110px] [animation-delay:-26s]" />
+          <div className="aurora-a absolute -left-1/4 top-[-35%] h-[150%] w-[95%] rounded-full bg-[radial-gradient(closest-side,rgba(56,189,248,0.45),transparent)] blur-[90px]" />
+          <div className="aurora-b absolute -right-1/4 bottom-[-45%] h-[150%] w-[95%] rounded-full bg-[radial-gradient(closest-side,rgba(167,139,250,0.45),transparent)] blur-[90px]" />
+          <div className="aurora-a absolute left-1/4 top-[-25%] h-[130%] w-[65%] rounded-full bg-[radial-gradient(closest-side,rgba(45,212,191,0.32),transparent)] blur-[100px] [animation-delay:-14s]" />
         </div>
 
         {/*

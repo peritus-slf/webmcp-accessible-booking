@@ -175,6 +175,69 @@ dialog::backdrop {
   .aurora-b {
     animation: aurora-drift-b 44s ease-in-out infinite;
   }
+
+  /*
+    Ribbon aurora.
+
+    Soft blurred blobs read as a wash; real northern lights read as bands. The
+    band effect comes from a repeating-linear-gradient scrolled across itself:
+    stripes of colour at a shallow angle, a second darker stripe set offset
+    from it, and a blend between the two so the overlaps carve the ribbons out
+    rather than muddying them. Scrolling `background-position` moves the bands
+    without moving any element, so nothing reflows and nothing parallaxes.
+
+    Written here rather than imported. The technique — repeating gradients,
+    blend modes, an animated background-position — is a common CSS idiom, but
+    the well-known component implementing it ships under terms that would not
+    survive being redistributed in a public MIT repository.
+
+    Timing is the accessibility decision: 60 seconds for a full pass. Bands
+    crossing a viewport slowly are atmosphere. The same bands at a few hertz
+    would be a seizure risk, which is the entire reason this file is careful.
+  */
+  @keyframes aurora-bands {
+    0% {
+      background-position:
+        50% 50%,
+        50% 50%;
+    }
+    100% {
+      background-position:
+        350% 50%,
+        200% 50%;
+    }
+  }
+
+  .aurora-ribbons {
+    --band-dark: repeating-linear-gradient(
+      100deg,
+      rgb(2 6 23) 0%,
+      rgb(2 6 23) 7%,
+      transparent 10%,
+      transparent 12%,
+      rgb(2 6 23) 16%
+    );
+    --band-colour: repeating-linear-gradient(
+      100deg,
+      rgb(14 165 233) 10%,
+      rgb(129 140 248) 15%,
+      rgb(56 189 248) 20%,
+      rgb(196 181 253) 25%,
+      rgb(45 212 191) 30%
+    );
+
+    background-image: var(--band-dark), var(--band-colour);
+    background-size:
+      300% 200%,
+      200% 100%;
+    background-position:
+      50% 50%,
+      50% 50%;
+    filter: blur(28px) saturate(1.25);
+    mix-blend-mode: plus-lighter;
+    animation: aurora-bands 60s linear infinite;
+    will-change: background-position;
+  }
 }
 
 /*

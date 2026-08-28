@@ -28,10 +28,10 @@ export default function Home() {
 
         <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {EVENTS.map((event) => (
-            <li key={event.slug}>
+            <li key={event.slug} className="rise">
               <article
                 aria-labelledby={`event-${event.slug}-title`}
-                className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                className="lift flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
               >
                 {/* Decorative. aria-hidden inside the component — the artwork
                     says nothing the heading does not already say. */}

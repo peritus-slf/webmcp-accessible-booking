@@ -46,7 +46,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       </nav>
 
       <article className="mt-6">
-        <div className="overflow-hidden rounded-xl">
+        <div className="rise overflow-hidden rounded-xl">
           <EventPoster event={event} variant="hero" />
         </div>
 

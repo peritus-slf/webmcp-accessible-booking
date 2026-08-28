@@ -94,6 +94,51 @@ accessible in principle and unusable in practice.
 If your baseline is inaccessible, adding a tool contract does not fix it. It
 just means the agent can use your site while your users still cannot.
 
+## There is no accessible mode
+
+Three things this site could plausibly have done, and deliberately did not.
+
+**No "accessible version" of the seating plan.** There are two views — the
+visual plan and a filterable list — and neither is the accessible one. Same 330
+seats, same selection, same booking, same components, same store. The toggle is
+named "Seat list", not "Accessible view", because the name is what decides which
+pattern you have built. Separate accessible versions were abandoned for good
+reasons: they segregate, they rot as the main site moves on, and they are
+routinely *less* accessible than the thing they replace.
+
+**No "photosensitive-safe mode".** There would be nothing to turn off. Nothing
+flashes, blinks, repeats or parallaxes; the poster art is static by design. A
+safe state that sits behind a toggle is unsafe for everyone who never finds the
+toggle — and a photosensitive user discovers your risk by having a seizure, not
+by reading your settings page. The strobe here is content being *described*,
+never something the page does.
+
+**No "shall I enable accessibility for you?" from the agent.** It is tempting
+and it is wrong three times over. The harm lands before the offer — an animation
+you can disable once it has played is not a mitigation. It makes accessibility
+conditional on having an agent, which is the two-tier web this project exists to
+argue against, rebuilt one layer up. And "enable accessibility features for this
+user" puts a GDPR special category into a tool call; as built, the agent applies
+constraints and the venue never learns why.
+
+What the site does instead is honour preferences the platform already carries.
+Motion lives inside `prefers-reduced-motion: no-preference`, so it is not a mode
+you enable but motion you get *unless you have already said no* — declared once,
+at OS level, respected on every site, no toggle and no conversation.
+`forced-colors` and `prefers-contrast` are handled the same way: under Windows
+High Contrast Mode the seating plan loses every colour we set, so each seat also
+carries a glyph, a text label, and a border drawn in a system colour.
+
+There is a useful role for the agent here, and it is not granting access. It is
+surfacing what already exists — *"this performance is captioned and relaxed, and
+I can filter seats by no-strobe"* — and, better still, pointing at the platform
+rather than the page: *"you mentioned motion makes you unwell; your OS has a
+setting every site respects."* That fixes the whole web for someone, not one
+venue.
+
+> We did not build an accessible mode. We built an accessible site, and then
+> asked permission to animate it.
+
 ## Access details modelled
 
 Not decorative. Each is a reason a seat that looks fine on a plan turns out to

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { EVENTS, accessSummary, eventBySlug } from "@/lib/venue/events";
 import { AccessBadges } from "@/components/AccessBadges";
 import { EventBooking } from "@/components/EventBooking";
+import { EventPoster } from "@/components/EventPoster";
 
 export function generateStaticParams() {
   return EVENTS.map((e) => ({ slug: e.slug }));
@@ -45,7 +46,11 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       </nav>
 
       <article className="mt-6">
-        <header>
+        <div className="overflow-hidden rounded-xl">
+          <EventPoster event={event} variant="hero" />
+        </div>
+
+        <header className="mt-6">
           <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
             {event.category}
           </p>

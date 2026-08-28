@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EVENTS } from "@/lib/venue/events";
 import { AccessBadges } from "@/components/AccessBadges";
+import { EventPoster } from "@/components/EventPoster";
 
 export default function Home() {
   return (
@@ -32,12 +33,9 @@ export default function Home() {
                 aria-labelledby={`event-${event.slug}-title`}
                 className="flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
               >
-                {/* Decorative poster block. Marked aria-hidden because it
-                    carries no information the heading does not already give. */}
-                <div
-                  aria-hidden="true"
-                  className={`h-32 bg-gradient-to-br ${event.gradient}`}
-                />
+                {/* Decorative. aria-hidden inside the component — the artwork
+                    says nothing the heading does not already say. */}
+                <EventPoster event={event} />
 
                 <div className="flex flex-1 flex-col p-5">
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-500">

@@ -1,46 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useId } from "react";
 import { EVENTS, type VenueEvent } from "@/lib/venue/events";
 import { EventPoster } from "@/components/EventPoster";
-import { AccessBadges } from "@/components/AccessBadges";
 import { isk } from "@/lib/format";
 import { useStore } from "@/lib/useStore";
-import { setState, type EventFilters } from "@/lib/store";
+import { setState, NO_FILTERS, type EventFilters } from "@/lib/store";
 
 /**
- * The season listing, with filters.
+ * The season listing.
  *
- * The cards are ordinary: poster, category, title, date, price from. No access
- * badges by default, because no commercial venue site puts them there and this
- * page is meant to look like one.
+ * An ordinary grid of ordinary cards: poster, category, title, date, price
+ * from, Book. No access badges, no filter row, nothing announcing that this
+ * venue has thought about disabled patrons — because no commercial venue site
+ * has any of that on its landing page, and this page is meant to look like one.
  *
- * Access sits in the filter row instead — one control among several, next to
- * genre and date, which is exactly where real sites put it and exactly why
- * almost nobody finds it. Turning it on reveals the access detail on every
- * card.
+ * The access data is not missing, it is just not *here*. Every performance
+ * publishes its full provision — captions, interpretation, audio description,
+ * relaxed staging, lighting rig — through `list_events` and `get_event`, and
+ * `filter_events` narrows this grid. So an agent that knows what someone needs
+ * can cut six performances down to the one that works, while the page a sighted
+ * visitor lands on is just a page.
  *
- * This is a FILTER, not an accessible version of the page. The distinction is
- * load-bearing:
- *   - It is available to everyone, by clicking, with no agent involved.
- *   - It changes what is shown, never what can be done. Every performance is
- *     bookable either way, and the full access detail is on each event page
- *     regardless.
- *   - There is one page. Nobody is routed to a parallel site that will rot.
+ * That is the argument the whole project is making, in one component: the site
+ * does not have to be redesigned around disabled users. It has to expose a real
+ * tool contract.
  *
- * An agent sets the same filter through `filter_events`, because it read the
- * patron's saved profile. That is personalisation — the same thing as filtering
- * by price — and not a mode that has to be enabled before the site is usable.
+ * The one control that does appear is the escape hatch. If a filter is active,
+ * a line says so and offers to clear it. An agent that can narrow the page and
+ * leave a human with no way back has taken something away rather than added
+ * anything — and the access detail itself is on every event page regardless, so
+ * nothing here is the only route to it.
  */
-
-const ACCESS_FILTERS: { key: keyof EventFilters; label: string; hint: string }[] = [
-  { key: "relaxed", label: "Relaxed performances", hint: "House lights up, free movement, no strobe" },
-  { key: "captioned", label: "Captioned", hint: "Live caption unit" },
-  { key: "signed", label: "Sign-language interpreted", hint: "Interpreter downstage left" },
-  { key: "audioDescribed", label: "Audio described", hint: "With a touch tour before curtain" },
-  { key: "noStrobe", label: "No strobe", hint: "For photosensitive epilepsy" },
-];
 
 export function matchesFilters(event: VenueEvent, f: EventFilters): boolean {
   if (f.relaxed && !event.relaxed) return false;
@@ -55,122 +46,60 @@ function priceFrom(event: VenueEvent): number {
   return Math.round((6500 * event.priceMultiplier) / 500) * 500;
 }
 
+const FILTER_NAMES: Record<keyof EventFilters, string> = {
+  relaxed: "relaxed performances",
+  captioned: "captioned",
+  signed: "sign-language interpreted",
+  audioDescribed: "audio described",
+  noStrobe: "no strobe",
+};
+
 export function SeasonBrowser() {
-  const { eventFilters, accessProfile, user } = useStore();
-  const filtersId = useId();
+  const { eventFilters } = useStore();
 
-  const anyActive = Object.values(eventFilters).some(Boolean);
+  const active = (Object.keys(eventFilters) as (keyof EventFilters)[]).filter(
+    (k) => eventFilters[k],
+  );
   const shown = EVENTS.filter((e) => matchesFilters(e, eventFilters));
-
-  function toggle(key: keyof EventFilters, value: boolean) {
-    setState({ eventFilters: { ...eventFilters, [key]: value } });
-  }
-
-  // Offered only to someone whose saved profile actually implies a filter.
-  const profileImplies =
-    user && (accessProfile.noStrobe || accessProfile.captionsRequired || accessProfile.interpreterRequired);
 
   return (
     <>
-      <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">The autumn season</h2>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">
-            Six performances between September and October.
-          </p>
-        </div>
-
-        {profileImplies && !anyActive && (
-          <button
-            type="button"
-            onClick={() =>
-              setState({
-                eventFilters: {
-                  relaxed: false,
-                  captioned: accessProfile.captionsRequired,
-                  signed: accessProfile.interpreterRequired,
-                  audioDescribed: false,
-                  noStrobe: accessProfile.noStrobe,
-                },
-              })
-            }
-            className="min-h-11 rounded-md border border-slate-400 px-4 text-sm font-medium hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
-          >
-            Show only what matches my access profile
-          </button>
-        )}
-      </div>
-
-      <details className="mt-6 rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <summary className="flex min-h-11 cursor-pointer items-center px-4 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
-          Filter the season
-          {anyActive && (
-            <span className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white dark:bg-white dark:text-slate-900">
-              {Object.values(eventFilters).filter(Boolean).length} active
-            </span>
-          )}
-        </summary>
-
-        <fieldset id={filtersId} className="border-t border-slate-200 p-4 dark:border-slate-800">
-          <legend className="sr-only">Filter performances by access provision</legend>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {ACCESS_FILTERS.map((f) => (
-              <div key={String(f.key)} className="flex items-start gap-2">
-                <input
-                  id={`${filtersId}-${String(f.key)}`}
-                  type="checkbox"
-                  checked={Boolean(eventFilters[f.key])}
-                  onChange={(e) => toggle(f.key, e.target.checked)}
-                  aria-describedby={`${filtersId}-${String(f.key)}-hint`}
-                  className="mt-1 size-5"
-                />
-                <span>
-                  <label htmlFor={`${filtersId}-${String(f.key)}`} className="text-sm font-medium">
-                    {f.label}
-                  </label>
-                  <span
-                    id={`${filtersId}-${String(f.key)}-hint`}
-                    className="block text-xs text-slate-600 dark:text-slate-400"
-                  >
-                    {f.hint}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {anyActive && (
-            <button
-              type="button"
-              onClick={() =>
-                setState({
-                  eventFilters: {
-                    relaxed: false,
-                    captioned: false,
-                    signed: false,
-                    audioDescribed: false,
-                    noStrobe: false,
-                  },
-                })
-              }
-              className="mt-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm dark:border-slate-600"
-            >
-              Clear filters
-            </button>
-          )}
-        </fieldset>
-      </details>
-
-      <p role="status" aria-live="polite" aria-atomic="true" className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-        {anyActive
-          ? `Showing ${shown.length} of ${EVENTS.length} performances that match your filters.`
-          : `Showing all ${EVENTS.length} performances.`}
+      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        The autumn season
+      </h2>
+      <p className="mt-2 text-slate-600 dark:text-slate-400">
+        Six performances between September and October.
       </p>
 
+      {/*
+        Announced whether the change came from a click or a tool call, so a
+        screen-reader user hears the listing narrow at the moment it happens.
+      */}
+      <p role="status" aria-live="polite" aria-atomic="true" className={active.length > 0 ? "sr-only" : "sr-only"}>
+        {active.length > 0
+          ? `Showing ${shown.length} of ${EVENTS.length} performances, filtered by ${active.map((k) => FILTER_NAMES[k]).join(" and ")}.`
+          : ""}
+      </p>
+
+      {active.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+          <span>
+            Showing <strong>{shown.length}</strong> of {EVENTS.length} performances —{" "}
+            {active.map((k) => FILTER_NAMES[k]).join(", ")}.
+          </span>
+          <button
+            type="button"
+            onClick={() => setState({ eventFilters: NO_FILTERS })}
+            className="ml-auto min-h-11 rounded-md border border-slate-400 px-4 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:hover:bg-slate-800"
+          >
+            Show all performances
+          </button>
+        </div>
+      )}
+
       {shown.length === 0 ? (
-        <p className="mt-6 rounded-lg border border-amber-700 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
-          No performance this season matches every filter. The access line can
-          tell you what is planned for the spring.
+        <p className="mt-8 rounded-lg border border-amber-700 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          No performance this season matches every filter.
         </p>
       ) : (
         <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -191,7 +120,9 @@ export function SeasonBrowser() {
                     {/* 3.1.2 Language of Parts — Icelandic titles on an English page. */}
                     <span lang="is">{event.title}</span>
                   </h3>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{event.subtitle}</p>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                    {event.subtitle}
+                  </p>
 
                   <p className="mt-3 text-sm">
                     <time dateTime={event.date}>
@@ -207,17 +138,6 @@ export function SeasonBrowser() {
                   <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     From {isk(priceFrom(event))} kr
                   </p>
-
-                  {/*
-                    Access detail appears only once someone has asked for it —
-                    by clicking a filter, or via an agent that read their
-                    profile. It is on the event page either way.
-                  */}
-                  {anyActive && (
-                    <div className="mt-4">
-                      <AccessBadges event={event} />
-                    </div>
-                  )}
 
                   <div className="mt-5 flex-1" />
 

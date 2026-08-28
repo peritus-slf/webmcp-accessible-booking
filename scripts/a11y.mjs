@@ -35,6 +35,8 @@ const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-prac
 const CASES = [
   { name: "home", path: "/" },
   { name: "access information", path: "/access" },
+  { name: "visit — food and drink", path: "/visit/food-and-drink" },
+  { name: "visit — getting here", path: "/visit/getting-here" },
   { name: "sign in", path: "/signin" },
   { name: "account (signed out)", path: "/account" },
   { name: "bookings (signed out)", path: "/bookings" },

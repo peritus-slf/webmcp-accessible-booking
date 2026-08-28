@@ -24,16 +24,16 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
       { href: "/", label: "Autumn season" },
       { href: "/", label: "Orchestral" },
       { href: "/", label: "Jazz and late night" },
-      { href: "/", label: "Family and schools" },
+      { href: "/visit/families", label: "Family and schools" },
     ],
   },
   {
     heading: "Your visit",
     links: [
-      { href: "/", label: "Getting here" },
-      { href: "/", label: "Food and drink" },
+      { href: "/visit/getting-here", label: "Getting here" },
+      { href: "/visit/food-and-drink", label: "Food and drink" },
       { href: "/access", label: "Accessibility" },
-      { href: "/", label: "Cloakroom and bags" },
+      { href: "/visit/cloakroom", label: "Cloakroom and bags" },
     ],
   },
   {
@@ -41,7 +41,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
     links: [
       { href: "/", label: "About the hall" },
       { href: "/", label: "Support us" },
-      { href: "/", label: "Hire the venue" },
+      { href: "/visit/hire-the-venue", label: "Hire the venue" },
       { href: "/", label: "Work with us" },
     ],
   },
@@ -50,7 +50,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
     links: [
       { href: "/bookings", label: "My bookings" },
       { href: "/account", label: "My account" },
-      { href: "/", label: "Groups of 10+" },
+      { href: "/visit/groups", label: "Groups of 10+" },
       { href: "/", label: "Gift vouchers" },
     ],
   },

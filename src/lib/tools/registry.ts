@@ -1,5 +1,6 @@
 import { VENUE_ACCESS, seatById } from "@/lib/venue/hall";
 import { EVENTS, accessSummary, eventBySlug, type VenueEvent } from "@/lib/venue/events";
+import { INFO_TOPICS, infoTopicBySlug } from "@/lib/venue/information";
 import { describeSeat, findSeats, seatsForEvent } from "@/lib/venue/query";
 import type { SeatQuery, StrobeExposure } from "@/lib/venue/types";
 import { isk } from "@/lib/format";
@@ -90,7 +91,8 @@ const accessCapabilitiesTool: ToolDefinition = {
       "3. SEAT-LEVEL FILTERING — find_seats searches on access requirements directly and returns groups that sit together. It states any requirement it could not meet rather than quietly returning an unsuitable seat.",
       "4. FREE COMPANION TICKET — one companion ticket is free with every wheelchair booking. It is applied at complete_booking automatically; nobody has to ask for it.",
       "5. VENUE FACILITIES — step-free entrances, accessible toilets, loop coverage, quiet room and assistance-dog policy, via get_venue_access_info.",
-      "6. A HUMAN, if wanted — access line +354 555 0100, 10:00-18:00, or access@example.is, who reply in writing on request. Offer this alongside the site, never instead of it: everything above is bookable online without a call.",
+      "6. PRACTICAL VISIT INFORMATION — getting here, food and drink, cloakroom, groups, venue hire, families — each carrying its own access detail, via get_venue_information. Blue-badge bays, lowered bar counters, table service to a seat, powerchair storage and ear defenders all live there rather than on an accessibility page.",
+      "7. A HUMAN, if wanted — access line +354 555 0100, 10:00-18:00, or access@example.is, who reply in writing on request. Offer this alongside the site, never instead of it: everything above is bookable online without a call.",
       "",
       user
         ? `${user.name} is signed in and has a saved access profile. Read it before searching, and offer to apply it rather than asking them to restate their needs.`
@@ -239,6 +241,50 @@ const getEventTool: ToolDefinition<{ eventSlug: string }> = {
     ]
       .filter(Boolean)
       .join("\n");
+  },
+};
+
+const venueInformationTool: ToolDefinition<{ topic?: string }> = {
+  name: "get_venue_information",
+  description:
+    "Practical information about visiting Aurora Hall — getting here, food and drink, cloakroom and bags, groups of ten or more, hiring the venue, families and schools. Every topic includes its own access detail, so this answers questions like whether the bar has a lowered counter, whether staff will bring a drink to a seat, or where a powerchair is stored during a performance. Call with no topic to list what is covered.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      topic: {
+        type: "string",
+        enum: INFO_TOPICS.map((t) => t.slug),
+        description: "Which topic to read. Omit to list the available topics.",
+      },
+    },
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true },
+  async execute({ topic } = {}) {
+    if (!topic) {
+      return [
+        "Venue information topics. Each carries its own access detail:",
+        ...INFO_TOPICS.map((t) => `- ${t.slug} — ${t.title}. ${t.summary}`),
+        "",
+        "Call get_venue_information with a topic slug to read one. For the building's permanent access facilities use get_venue_access_info; for what this site can do for a patron with access requirements use get_access_capabilities.",
+      ].join("\n");
+    }
+
+    const found = infoTopicBySlug(topic);
+    if (!found) {
+      return `There is no topic "${topic}". Available: ${INFO_TOPICS.map((t) => t.slug).join(", ")}.`;
+    }
+
+    return [
+      `${found.title} — ${found.summary}`,
+      "",
+      ...found.body,
+      "",
+      `ACCESS, specific to ${found.title.toLowerCase()}:`,
+      ...found.access.map((a) => `- ${a}`),
+      "",
+      `This is also readable at /visit/${found.slug} — nothing here is agent-only.`,
+    ].join("\n");
   },
 };
 
@@ -577,6 +623,7 @@ export const TOOLS: ToolDefinition<never>[] = [
   findSeatsTool,
   describeSeatTool,
   venueAccessTool,
+  venueInformationTool,
   holdSeatsTool,
   releaseSeatsTool,
   completeBookingTool,

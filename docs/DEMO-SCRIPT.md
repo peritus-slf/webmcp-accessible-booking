@@ -26,7 +26,7 @@ Show the landing page. Don't linger.
 
 **Type into ChatGPT:**
 
-> Open https://[deployed-url] and tell me what's on.
+> Open https://aurorahall.app and tell me what's on.
 
 **Watch for:** it calls `list_events` rather than reading the page. The access
 provision comes back as data — captioned, signed, relaxed, strobe level — not as

@@ -26,8 +26,10 @@ here is the other choice.
 
 ## What we built
 
-Aurora Hall is a 330-seat venue with a booking flow. Six tools are defined
-**once**, in [`src/lib/tools/registry.ts`](src/lib/tools/registry.ts):
+Aurora Hall is a 330-seat venue with a booking flow. Sixteen tools are defined
+**once**, in [`src/lib/tools/registry.ts`](src/lib/tools/registry.ts) — browsing
+the season, reading access information, filling in a sign-up, and the six at the
+heart of the booking flow:
 
 | Tool | |
 |---|---|

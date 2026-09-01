@@ -208,5 +208,7 @@ For each failure found, record: what you did, what was announced, what should
 have been announced. A failure here is worth more than a pass — it is the thing
 a judge would have found instead.
 
-Update `docs/RUBRIC.md` after the run. Execution and human-agent experience are
-both currently scored down purely because this document had not been run.
+Record the result in the header block above and commit it. A test plan with an
+empty signature line is not evidence of anything; a filled-in one, including the
+failures, is the only honest basis for claiming this site works with a screen
+reader.

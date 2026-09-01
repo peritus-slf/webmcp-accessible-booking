@@ -76,11 +76,12 @@ export async function callTool(
 ): Promise<string | null> {
   try {
     return await mc.executeTool(tool, input);
-  } catch (error) {
-    if (error instanceof TypeError || String(error).includes("object input")) {
-      return mc.executeTool(tool, JSON.stringify(input));
-    }
-    throw error;
+  } catch {
+    // Do not try to recognise the error. Chrome 152 rejects the object form
+    // with a DOMException "Failed to parse input arguments"; ChatGPT's browser
+    // rejects the string form with "executeTool requires an object input".
+    // Matching on either message is how this silently broke once already.
+    return mc.executeTool(tool, JSON.stringify(input));
   }
 }
 

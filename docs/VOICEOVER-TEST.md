@@ -11,7 +11,13 @@ Budget **30–40 minutes** for a full run. Record results in the Result column �
 including the ones that pass, because "we tested and it was fine" is a claim we
 need to be able to make honestly.
 
-**Tester:** ______________  **Date:** ____________  **Build:** `git rev-parse --short HEAD` = __________
+The structural pass in section 0.1 is **done** and recorded below. It removes
+most of the ways this document could fail, because every defect it looks for is
+one a screen reader would then trip over. What it cannot tell you is how any of
+it *sounds*, which is the whole reason the rest of this document exists.
+
+**Structural pass:** Claude · 1 September 2026 · build `11ee2b5` · https://aurorahall.app
+**VoiceOver pass:** ______________  **Date:** ____________  **Build:** ____________
 
 ---
 
@@ -48,8 +54,45 @@ before typing into a field.
 ### Before you start
 
 - Close other tabs. VoiceOver announces window changes and it gets confusing.
-- Have the dev server running: `npm run dev`.
-- Start **signed out**, at `http://localhost:3000`.
+- Start **signed out**, at <https://aurorahall.app>. Test the deployed build,
+  not the dev server: it is what a judge will open, and the build hash is then
+  a fact you can write down.
+
+---
+
+## 0.1 Structural pass — done, 1 September 2026
+
+Automated, against build `11ee2b5` on <https://aurorahall.app>. Recorded here so
+the manual pass below can concentrate on what only a person can judge.
+
+| Checked | Result |
+|---|---|
+| `npm run a11y` — axe, 13 states, wcag2a…wcag22aa + best-practice | 0 violations, exit 0 |
+| Seating-plan grid: 330 cells, each containing a labelled button | 330/330 named |
+| Roving tabindex | exactly one `tabindex="0"`, 329 at `-1`, throughout |
+| Arrow-key navigation, real key events | B-1 → `→` `→` → B-3 → `↓` → C-3; tabbable follows focus |
+| Grid accessible name | via `aria-labelledby="seats-heading"` |
+| Selection state | `aria-pressed` toggles; focus stays on the seat |
+| Live region on selection | announced "Selected seat C-3, 12.000 kr. 10 steps, induction loop, captions in view, high strobe, 58 m to accessible toilet. 1 seat selected." |
+| Skip link | first in tab order, `#main`, target exists |
+| Landmarks | 8, including named Primary, Breadcrumb and Footer navs |
+| Headings | one `h1`, no skipped levels |
+| Unlabelled controls / images without `alt` | none |
+| Focus indicator | 2px outline with offset, visible on the grid |
+| Platform preferences in the shipped CSS | `prefers-reduced-motion` (both directions), `forced-colors: active`, `prefers-contrast: more` |
+| Any view named "accessible" | none — the toggle reads "Seating plan" / "Seat list" |
+| WebMCP on the deployed origin | 16 tools registered; `executeTool` returns prose |
+
+One deliberate oddity, not a defect: an `sr-only` `<h2>` ("Ask for seats")
+precedes the `<h1>` in the header, so a screen reader meets a level 2 before the
+level 1. axe passes it. Listen for whether it is actually confusing — that
+judgement is the kind of thing this document is for.
+
+**What the structural pass cannot tell you**, and what the rows below are
+therefore worth running: whether the seat announcement is intelligible at speech
+rate rather than merely complete, whether moving through the grid is bearable,
+whether anything is so verbose it exhausts, and whether Icelandic names survive
+an English voice.
 
 ---
 
@@ -212,3 +255,7 @@ Record the result in the header block above and commit it. A test plan with an
 empty signature line is not evidence of anything; a filled-in one, including the
 failures, is the only honest basis for claiming this site works with a screen
 reader.
+
+**If time is short**, run 3.7, 4.6 and 7.6 — the seating plan, the seat list and
+the command interface — and write down that those are the rows you ran. A
+partial pass, honestly scoped, is worth more than a full plan left blank.

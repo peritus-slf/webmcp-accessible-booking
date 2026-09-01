@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteChrome } from "@/components/site/SiteChrome";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -23,6 +24,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <SiteChrome>{children}</SiteChrome>
+        {/*
+          Vercel Web Analytics. Cookieless and page-level only, so it needs no
+          consent banner — and there is nothing here for it to learn. Access
+          requirements live in component state and never in a URL, so no filter
+          a patron sets can reach a query string, and none of it is collected.
+        */}
+        <Analytics />
       </body>
     </html>
   );

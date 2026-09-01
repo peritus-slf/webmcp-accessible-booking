@@ -164,8 +164,13 @@ who don't need them is the reason they're unavailable to patrons who do.
 
 **Compromises are stated, never silent.** If no seat meets every requirement,
 constraints are relaxed in a fixed order and the result says exactly what was
-given up. Step-free access and strobe limits are relaxed last. A caller is never
-handed a seat that quietly fails a stated access need.
+given up — a price ceiling, a distance, an interpreter sightline.
+
+**A strobe limit and a step-free route are never relaxed.** They are not
+preferences to trade against a better view. Giving them up does not produce a
+worse seat, it produces a seat the caller cannot use, or must not be sold. When
+those cannot be met the answer is no seat at all, and the reason why. A caller
+is never handed a seat that fails a stated access need, quietly or otherwise.
 
 ## Consequential actions, and a bug the agent found
 

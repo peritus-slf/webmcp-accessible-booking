@@ -555,9 +555,10 @@ const findSeatsTool: ToolDefinition<SeatQuery & { eventSlug: string; useMyAccess
       if (p.captionsRequired && !event.captioned) {
         applied += ` Note: ${event.title} is NOT a captioned performance, so no seat can satisfy that requirement here.`;
       }
-      if (p.noStrobe && event.lighting === "heavy") {
-        return `${event.title} uses continuous strobe throughout the house. There is no seat at this performance that is safe for photosensitive epilepsy, so none is offered. ${accessSummary(event)[0]}`;
-      }
+    }
+
+    if (query.maxStrobeExposure === "none" && event.lighting === "heavy") {
+      return `${event.title} runs continuous strobe throughout the house, so there is no seat at this performance that is safe for photosensitive epilepsy and none is offered. This is a property of the performance, not of where you sit — a different seat would not help.${applied} Other performances this season have no strobe at all; call list_events to see them.`;
     }
 
     const groups = findSeats(event, query);

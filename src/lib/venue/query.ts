@@ -23,7 +23,15 @@ export function seatsForEvent(event: VenueEvent): Seat[] {
   }));
 }
 
-/** Constraints in the order we are willing to give them up, least costly first. */
+/**
+ * Constraints in the order we are willing to give them up, least costly first.
+ *
+ * `maxStrobeExposure` and `stepFree` are deliberately absent and must stay
+ * absent. A strobe limit and a step-free route are safety and access
+ * requirements, not preferences: giving them up does not produce a worse seat,
+ * it produces a seat the caller cannot use, or must not be sold. When those
+ * cannot be met the honest answer is no seat at all.
+ */
 const RELAXATION_ORDER = [
   "maxPriceIsk",
   "maxDistanceToStageM",
@@ -31,8 +39,6 @@ const RELAXATION_ORDER = [
   "signInterpreterVisible",
   "captionScreenVisible",
   "hearingLoop",
-  "maxStrobeExposure",
-  "stepFree",
 ] as const;
 
 const LABELS: Record<string, string> = {
